@@ -90,35 +90,64 @@ class TestMongoDbQuery(unittest.TestCase):
         mongo_query.where(lambda x: x['name'] < 1).to_list()
         self.assertDictEqual(fc.filter, { 'name': { '$lt': 1 } })
 
-    def test_query_all(self):
+    # test from https://docs.mongodb.com/manual/tutorial/getting-started/
+
+    def test_query_select_all_documents(self):
         fc = FakeCollection()
         mongo_query = MongoDbQuery(fc)
         mongo_query.to_list()
         self.assertDictEqual(fc.filter, {})
 
-    def test_query_field_equal(self):
+    def test_query_select_documents_by_predicate(self):
         fc = FakeCollection()
         mongo_query = MongoDbQuery(fc)
         mongo_query.where(lambda x: x['status'] == 'D').to_list()
         self.assertDictEqual(fc.filter, { 'status': 'D' })
 
-    def test_query_embedded_doc(self):
+    def test_query_match_an_embedded_document_1(self):
         fc = FakeCollection()
         mongo_query = MongoDbQuery(fc)
-        mongo_query.where(lambda x: x['size']['h'] == 14).to_list()
-        self.assertDictEqual(fc.filter, { 'size': { 'h': 14 } })
+        obj = { 'h': 14, 'w': 21, 'uom': 'cm' }
+        mongo_query.where(lambda x: x['size'] == obj).to_list()
+        self.assertDictEqual(fc.filter, { 'size': obj })
 
-    def test_query_embedded_doc_multi_where(self):
+    def test_query_match_an_embedded_document_2(self):
+        fc = FakeCollection()
+        mongo_query = MongoDbQuery(fc)
+        mongo_query.where(lambda x: x['size'] == { 'h': 14, 'w': 21, 'uom': 'cm' }).to_list()
+        self.assertDictEqual(fc.filter, { 'size': { 'h': 14, 'w': 21, 'uom': 'cm' } })
+
+    def test_query_match_a_field_in_an_embedded_document(self):
+        fc = FakeCollection()
+        mongo_query = MongoDbQuery(fc)
+        mongo_query.where(lambda x: x['size']['uom'] == 'in').to_list()
+        self.assertDictEqual(fc.filter, { "size.uom": "in" })
+
+    def test_query_match_an_element_in_an_array(self):
+        fc = FakeCollection()
+        mongo_query = MongoDbQuery(fc)
+        mongo_query.where(lambda x: 'item' in x['list']).to_list()
+        self.assertDictEqual(fc.filter, { 'list': 'item' })
+
+    def test_query_match_an_array_exactly(self):
+        fc = FakeCollection()
+        mongo_query = MongoDbQuery(fc)
+        mongo_query.where(lambda x: x['tags'] == ["red", "blank"] ).to_list()
+        self.assertDictEqual(fc.filter, { 'tags': ["red", "blank"] })
+
+    # test from idea
+
+    def test_query_embedded_doc_field_multi_where(self):
         fc = FakeCollection()
         mongo_query = MongoDbQuery(fc)
         mongo_query.where(lambda x: x['size']['h'] == 14).where(lambda x: x['size']['uom'] == 'cm').to_list()
-        self.assertDictEqual(fc.filter, { 'size': { 'h': 14, 'uom': "cm" } })
+        self.assertDictEqual(fc.filter, { 'size.h': 14, 'size.uom': "cm" })
 
-    def test_query_embedded_doc_with_and(self):
+    def test_query_embedded_doc_field_with_and(self):
         fc = FakeCollection()
         mongo_query = MongoDbQuery(fc)
         mongo_query.where(lambda x: (x['size']['h'] == 14) & (x['size']['uom'] == 'cm')).to_list()
-        self.assertDictEqual(fc.filter, { 'size': { 'h': 14, 'uom': "cm" } })
+        self.assertDictEqual(fc.filter, { 'size.h': 14, 'size.uom': "cm" })
 
 
 def main(argv=None):

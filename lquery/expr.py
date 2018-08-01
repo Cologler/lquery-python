@@ -184,6 +184,47 @@ class LambdaExpr(Expr):
         return f'lambda {args_str}: {self._body}'
 
 
+class BuildListExpr(Expr):
+    def __init__(self, *items):
+        self._items = items
+
+    @property
+    def items(self):
+        return self._items
+
+    def __str__(self):
+        kvps_str = ', '.join(f'{repr(v)}' for v in self._items)
+        return f'[{kvps_str}]'
+
+    def create(self):
+        '''
+        build the dict
+        '''
+        return list(self._items)
+
+
+class BuildDictExpr(Expr):
+    def __init__(self, *kvps):
+        self._kvps = kvps
+
+    @property
+    def kvps(self):
+        return self._kvps
+
+    def __str__(self):
+        kvps_str = ', '.join(f'{repr(k)}: {repr(v)}' for k, v in self._kvps)
+        return f'{{{kvps_str}}}'
+
+    def create(self):
+        '''
+        build the dict
+        '''
+        d = {}
+        for k, v in self._kvps:
+            d[k] = v
+        return d
+
+
 def make(obj) -> IExpr:
     if isinstance(obj, IExpr):
         return obj
@@ -226,6 +267,18 @@ def call(func, *args, **kwargs):
     represents call a function.
     '''
     return CallExpr(func, *[make(x) for x in args], **dict((k, make(v)) for k, v in kwargs))
+
+def build_dict(*kvps):
+    '''
+    represents build a dict object.
+    '''
+    return BuildDictExpr(*kvps)
+
+def build_list(*items):
+    '''
+    represents build a dict object.
+    '''
+    return BuildListExpr(*items)
 
 # pylint: disable=C0103
 empty = EmptyExpr

@@ -8,7 +8,10 @@
 from ..func import where, skip, take
 from ..query import Query
 from ..queryable import Queryable, QueryProvider
-from ..expr import BinaryExpr, IndexExpr, ConstExpr, call, parameter, CallExpr, Expr
+from ..expr import (
+    BinaryExpr, IndexExpr, ConstExpr, call, parameter, CallExpr, Expr,
+    BuildDictExpr, BuildListExpr
+)
 from ..expr_builder import to_lambda_expr
 from ..iterable import PROVIDER as ITERABLE_PROVIDER
 from ..iterable import IterableQuery
@@ -110,22 +113,39 @@ class MongoDbQueryImpl:
         return self._apply_call_where_compare(left, right, op)
 
     def _apply_call_where_compare(self, left, right, op):
-        if isinstance(right, IndexExpr) and isinstance(left, ConstExpr):
+        left_is_index_expr = isinstance(left, IndexExpr)
+        right_is_index_expr = isinstance(right, IndexExpr)
+
+        if not left_is_index_expr and not right_is_index_expr:
+            return False
+        if left_is_index_expr and right_is_index_expr:
+            return False
+
+        if not left_is_index_expr:
             return self._apply_call_where_compare(right, left, op)
-        if isinstance(left, IndexExpr) and isinstance(right, ConstExpr):
-            if isinstance(right.value, (str, int)):
-                value = self._from_op(right.value, op)
-                if value is not None:
-                    fields = self._from_deep_fields(left)
-                    data = self._filter
-                    for field in fields[:-1]:
-                        data = self._filter.setdefault(field, {})
-                    if data.get(left.name, value) != value:
-                        self._always_empty = True
-                    else:
-                        data[left.name] = value
-                    return True
-        return False
+
+        if isinstance(right, ConstExpr):
+            value = right.value
+        elif isinstance(right, BuildDictExpr):
+            value = right.create()
+        elif isinstance(right, BuildListExpr):
+            value = right.create()
+        else:
+            return False
+
+        if not isinstance(value, (str, int, dict, list)):
+            return False
+
+        value = self._from_op(value, op)
+        if value is None:
+            return False
+        data = self._filter
+        fname = '.'.join(self._from_deep_fields(left))
+        if data.get(fname, value) != value:
+            self._always_empty = True
+        else:
+            data[fname] = value
+        return True
 
     def _from_deep_fields(self, left_expr: IndexExpr):
         '''
@@ -146,8 +166,15 @@ class MongoDbQueryImpl:
     }
 
     def _from_op(self, right_value, op):
-        if op == '==':
+        '''
+        get mongodb query object value by `value` and `op`.
+
+        for example: `(3, '>')` => `{ '$gt': 3 }`
+        '''
+        if op == '==' or op == 'in':
+            # in mean item in list
             return right_value
+
         op = self.OP_MAP.get(op)
         if op is not None:
             return {
