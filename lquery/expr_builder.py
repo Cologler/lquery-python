@@ -34,7 +34,8 @@ class ExprBuilder:
     def __init__(self, func):
         self._func = func
         self._bytecode = dis.Bytecode(self._func)
-        self._args = dict((n, parameter(n)) for n in self._bytecode.codeobj.co_varnames)
+        self._args = [parameter(n) for n in self._bytecode.codeobj.co_varnames]
+        self._args_map = dict((p.name, p) for p in self._args)
         self._stack = []
         self._instructions = list(self._bytecode)
         self._instructions_map = dict((v.offset, v) for v in self._instructions)
@@ -50,11 +51,13 @@ class ExprBuilder:
                 raise NotSupportError(instr)
             method(instr)
         assert len(self._stack) == 1
-        return self._stack.pop()
+        body = self._stack.pop()
+        expr = lambda_(body, *self._args)
+        return expr
 
     def load_fast(self, instr: dis.Instruction):
         # load argument
-        self._stack.append(self._args[instr.argval])
+        self._stack.append(self._args_map[instr.argval])
 
     def load_const(self, instr: dis.Instruction):
         self._stack.append(instr.argval)
@@ -113,22 +116,19 @@ class ExprBuilder:
         self._stack.append(expr)
 
 
-def to_lambda_expr(expr: CallExpr):
+def to_lambda_expr(func):
     '''
     try compile a call expr to a lambda expr.
 
     return `None` when convert fail.
     '''
-    if not isinstance(expr, CallExpr):
-        raise TypeError
-    if expr.kwargs:
-        raise NotImplementedError
+    assert callable(func)
     try:
-        body = ExprBuilder(expr.func).build()
+        expr = ExprBuilder(func).build()
     except NotSupportError as err:
         if DEBUG:
             print(err)
         return None
     if DEBUG:
-        print('expr: ', body)
-    return lambda_(body, *expr.args, **expr.kwargs)
+        print('expr: ', expr)
+    return expr

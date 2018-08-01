@@ -10,9 +10,11 @@ from ..query import Query
 from ..queryable import Queryable, QueryProvider
 from ..expr import (
     BinaryExpr, IndexExpr, ConstExpr, call, parameter, CallExpr, Expr,
+    ParameterExpr,
     BuildDictExpr, BuildListExpr
 )
 from ..expr_builder import to_lambda_expr
+from ..expr_utils import get_deep_indexes
 from ..iterable import PROVIDER as ITERABLE_PROVIDER
 from ..iterable import IterableQuery
 
@@ -92,7 +94,9 @@ class MongoDbQueryImpl:
         if self._limit is not None or self._skip is not None:
             return False
 
-        lambda_expr = to_lambda_expr(call(predicate, parameter('_')))
+        lambda_expr = to_lambda_expr(predicate)
+        if len(lambda_expr.args) != 1:
+            return False
         if lambda_expr:
             return self._apply_call_where_by(lambda_expr.body)
         return False
@@ -157,25 +161,16 @@ class MongoDbQueryImpl:
         if value is None:
             return False
         data = self._filter
-        fname = '.'.join(self._from_deep_fields(left))
+        indexes, src_expr = get_deep_indexes(left)
+        if not isinstance(src_expr, ParameterExpr):
+            # since where args == 1, this must be the element.
+            return False
+        fname = '.'.join(indexes)
         if data.get(fname, value) != value:
             self._always_empty = True
         else:
             data[fname] = value
         return True
-
-    def _from_deep_fields(self, left_expr: IndexExpr):
-        '''
-        for `x['size']['h']` typed expr, return `['size', 'h']`.
-        '''
-        fields = []
-        cur_expr = left_expr
-        while isinstance(cur_expr.expr, IndexExpr):
-            fields.append(cur_expr.name)
-            cur_expr = cur_expr.expr
-        fields.append(cur_expr.name)
-        fields.reverse()
-        return fields
 
     _OP_MAP = {
         '<': '$lt',
