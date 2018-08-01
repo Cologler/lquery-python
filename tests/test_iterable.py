@@ -33,12 +33,15 @@ class TestIterableQuery(unittest.TestCase):
     def test_where(self):
         items = query().where(lambda x: 'spec-key' in x).to_list()
         self.assertEqual(len(items), 1)
-        item = items[0]
-        self.assertDictEqual(item, {'name': 'ys', 'value': '3g', 'spec-key': 'spec-value'})
+        self.assertDictEqual(items[0], {'name': 'ys', 'value': '3g', 'spec-key': 'spec-value'})
 
-    def test_where_2(self):
-        for item in query().where(lambda x: x['name'] == 'y').take(1):
-            self.assertEqual(item['name'], 'y')
+    def test_select(self):
+        items = query().select(lambda x: x['name']).to_list()
+        self.assertListEqual(items, ['x', 'y', 'y', 'ys'])
+
+    def test_select_many(self):
+        items = query().select_many(lambda x: x.values()).to_list()
+        self.assertListEqual(items, ['x', '3', 'y', '2', 'y', '3', 'ys', '3g', 'spec-value'])
 
 def main(argv=None):
     if argv is None:

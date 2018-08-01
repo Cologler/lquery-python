@@ -10,7 +10,7 @@ from typing import Callable
 from typeguard import typechecked
 
 from .expr import parameter, call
-from .func import where, select, take, skip, to_memory
+from .func import where, select, select_many, take, skip, to_memory
 
 class Query:
     def __init__(self, *exprs):
@@ -39,6 +39,11 @@ class Query:
     @typechecked
     def select(self, selector: Callable):
         call_expr = call(select, parameter('self'), selector)
+        return self.then(call_expr)
+
+    @typechecked
+    def select_many(self, collection_selector: Callable, result_selector: Callable):
+        call_expr = call(select_many, parameter('self'), collection_selector, result_selector)
         return self.then(call_expr)
 
     @typechecked

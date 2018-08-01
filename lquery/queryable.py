@@ -5,7 +5,7 @@
 #
 # ----------
 
-from abc import abstractproperty, abstractmethod
+from abc import abstractmethod
 from typing import Optional
 
 from typeguard import typechecked
@@ -76,6 +76,9 @@ class Queryable(IQueryable):
 
     def select(self, func):
         return self.update_query(self._query.select(func))
+
+    def select_many(self, collection_selector=identity, result_selector=identity):
+        return self.update_query(self._query.select_many(collection_selector, result_selector))
 
     def take(self, count: int):
         return self.update_query(self._query.take(count))
