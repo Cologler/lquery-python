@@ -5,7 +5,7 @@
 #
 # ----------
 
-from .iterable import IterableQuery, Queryable
+from .iterable import IterableQuery
 
-def enumerable(src) -> Queryable:
-    return IterableQuery(src)
+# pylint: disable=C0103
+enumerable = IterableQuery

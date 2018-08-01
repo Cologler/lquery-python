@@ -6,6 +6,7 @@
 # ----------
 
 import dis
+from contextlib import contextmanager
 
 from .expr import (
     CallExpr, # for type check
@@ -13,6 +14,13 @@ from .expr import (
 )
 
 DEBUG = False
+
+@contextmanager
+def debug():
+    global DEBUG
+    DEBUG = True
+    yield
+    DEBUG = False
 
 class NotSupportError(Exception):
     def __init__(self, instr: dis.Instruction):
@@ -27,9 +35,11 @@ class ExprBuilder:
         self._bytecode = dis.Bytecode(self._func)
         self._args = dict((n, parameter(n)) for n in self._bytecode.codeobj.co_varnames)
         self._stack = []
+        self._instructions = list(self._bytecode)
+        self._instructions_map = dict((v.offset, v) for v in self._instructions)
 
     def build(self):
-        for instr in self._bytecode:
+        for instr in self._instructions:
             method_name = instr.opname.lower()
             method = getattr(self, method_name, None)
             if not method:
@@ -59,6 +69,11 @@ class ExprBuilder:
         right = self._stack.pop()
         left = self._stack.pop()
         self._stack.append(BinaryExpr(make(left), make(right), '+'))
+
+    def binary_and(self, instr: dis.Instruction):
+        right = self._stack.pop()
+        left = self._stack.pop()
+        self._stack.append(BinaryExpr(make(left), make(right), '&'))
 
     def compare_op(self, instr: dis.Instruction):
         right = self._stack.pop()

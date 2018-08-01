@@ -5,10 +5,10 @@
 #
 # ----------
 
-from ..func import where
+from ..func import where, skip, take
 from ..query import Query
 from ..queryable import Queryable, QueryProvider
-from ..expr import BinaryExpr, IndexExpr, ConstExpr, call, parameter, CallExpr
+from ..expr import BinaryExpr, IndexExpr, ConstExpr, call, parameter, CallExpr, Expr
 from ..expr_builder import to_lambda_expr
 from ..iterable import PROVIDER as ITERABLE_PROVIDER
 from ..iterable import IterableQuery
@@ -27,8 +27,10 @@ class MongoDbQueryImpl:
     def __init__(self, queryable: Queryable):
         self._mongodb_query = queryable.src or queryable
         self._query = None
-        self._filter = {}
         self._always_empty = False
+        self._filter = {}
+        self._skip = None
+        self._limit = None
 
         exprs = []
         for expr in queryable.query.exprs:
@@ -47,7 +49,10 @@ class MongoDbQueryImpl:
         if self._always_empty:
             cursor = []
         else:
-            cursor = self._mongodb_query.collection.find(self._filter)
+            cursor = self._mongodb_query.collection.find(
+                filter=self._filter,
+                skip=self._skip or 0,
+                limit=self._limit or 0)
         self._query = IterableQuery(cursor)
         return self._query
 
@@ -55,18 +60,54 @@ class MongoDbQueryImpl:
         func = expr.func
         if func is where:
             return self._apply_call_where(expr.args[1].value)
-
+        if func is skip:
+            return self._apply_call_skip(expr.args[1].value)
+        if func is take:
+            return self._apply_call_take(expr.args[1].value)
         # for unhandled call, return False to create memory query.
         return False
 
+    def _apply_call_skip(self, value):
+        if self._skip is None:
+            self._skip = value
+        else:
+            self._skip += value
+        return True
+
+    def _apply_call_take(self, value):
+        if value == 0:
+            self._always_empty = True
+        elif self._limit is None:
+            self._limit = value
+        else:
+            self._limit = min(self._limit, value)
+        return True
+
     def _apply_call_where(self, predicate):
+        # mongo find() only accept one filter and a limit after it
+        # if `limit` is not None, cannot add more predicate.
+        if self._limit is not None or self._skip is not None:
+            return False
+
         lambda_expr = to_lambda_expr(call(predicate, parameter('_')))
         if lambda_expr:
-            body = lambda_expr.body
-            if isinstance(body, BinaryExpr):
-                left, op, right = body.left, body.op, body.right
-                return self._apply_call_where_compare(left, right, op)
+            return self._apply_call_where_by(lambda_expr.body)
         return False
+
+    def _apply_call_where_by(self, body: Expr):
+        if isinstance(body, BinaryExpr):
+            return self._apply_call_where_binary(body)
+        return False
+
+    def _apply_call_where_binary(self, body: BinaryExpr):
+        left, op, right = body.left, body.op, body.right
+        if op == '&':
+            if not self._apply_call_where_by(left):
+                return False
+            if not self._apply_call_where_by(right):
+                return False
+            return True
+        return self._apply_call_where_compare(left, right, op)
 
     def _apply_call_where_compare(self, left, right, op):
         if isinstance(right, IndexExpr) and isinstance(left, ConstExpr):
@@ -75,12 +116,29 @@ class MongoDbQueryImpl:
             if isinstance(right.value, (str, int)):
                 value = self._from_op(right.value, op)
                 if value is not None:
-                    if self._filter.get(left.name, value) != value:
+                    fields = self._from_deep_fields(left)
+                    data = self._filter
+                    for field in fields[:-1]:
+                        data = self._filter.setdefault(field, {})
+                    if data.get(left.name, value) != value:
                         self._always_empty = True
                     else:
-                        self._filter[left.name] = value
+                        data[left.name] = value
                     return True
         return False
+
+    def _from_deep_fields(self, left_expr: IndexExpr):
+        '''
+        for `x['size']['h']` typed expr, return `['size', 'h']`.
+        '''
+        fields = []
+        cur_expr = left_expr
+        while isinstance(cur_expr.expr, IndexExpr):
+            fields.append(cur_expr.name)
+            cur_expr = cur_expr.expr
+        fields.append(cur_expr.name)
+        fields.reverse()
+        return fields
 
     OP_MAP = {
         '<': '$lt',
