@@ -4,6 +4,10 @@ try bring C# linq to python.
 
 this library is a demo, not for production (yet).
 
+different with others (like asq):
+
+**lquery try convert func to SQL and query from database process.**
+
 ## COMPARE
 
 For C#:
