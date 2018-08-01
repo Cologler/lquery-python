@@ -136,6 +136,7 @@ class BinaryExpr(Expr):
 
 class CallExpr(Expr):
     def __init__(self, func, *args, **kwargs):
+        # all item of args and value of kwargs are ConstExpr
         super().__init__()
         self._func = func
         self._args = args
@@ -163,6 +164,11 @@ class CallExpr(Expr):
         ls += [f'{k}={repr(v)}' for k, v in self._kwargs.items()]
         args_str = ', '.join(ls)
         return f'{fn}({args_str})'
+
+    def __call__(self):
+        args = [v.value for v in self._args]
+        kwargs = dict((k, self._kwargs[k].value) for k in self._kwargs)
+        return self._func(*args, **kwargs)
 
 
 class LambdaExpr(Expr):
@@ -266,7 +272,7 @@ def call(func, *args, **kwargs):
     '''
     represents call a function.
     '''
-    return CallExpr(func, *[make(x) for x in args], **dict((k, make(v)) for k, v in kwargs))
+    return CallExpr(func, *[make(x) for x in args], **dict((k, make(kwargs[k])) for k in kwargs))
 
 def build_dict(*kvps):
     '''

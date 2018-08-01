@@ -10,7 +10,7 @@ from contextlib import contextmanager
 
 from .expr import (
     CallExpr, # for type check
-    attr, index, BinaryExpr, parameter, lambda_, make,
+    attr, index, BinaryExpr, parameter, lambda_, make, call,
     build_dict, build_list
 )
 
@@ -43,12 +43,25 @@ class ExprBuilder:
     def _print_stack(self):
         print(self._stack)
 
+    def _not_support(self, instr: dis.Instruction):
+        if DEBUG:
+            self._print_stack()
+        raise NotSupportError(instr)
+
+    def _stack_pop(self, count):
+        if count > 0:
+            items = self._stack[-count:]
+            self._stack = self._stack[0:-count]
+            return items
+        else:
+            return []
+
     def build(self):
         for instr in self._instructions:
             method_name = instr.opname.lower()
             method = getattr(self, method_name, None)
             if not method:
-                raise NotSupportError(instr)
+                return self._not_support(instr)
             method(instr)
         assert len(self._stack) == 1
         body = self._stack.pop()
@@ -71,6 +84,17 @@ class ExprBuilder:
         closure = self._func.__closure__[instr.arg]
         cell_contents = closure.cell_contents
         self._stack.append(cell_contents)
+
+    def load_global(self, instr: dis.Instruction):
+        name = instr.argval
+        if name in self._func.__globals__:
+            self._stack.append(self._func.__globals__[name])
+            return
+        builtins = self._func.__globals__['__builtins__']
+        if name in builtins:
+            self._stack.append(builtins[name])
+            return
+        return self._not_support(instr)
 
     def binary_subscr(self, _: dis.Instruction):
         # index like a[b]
@@ -98,12 +122,24 @@ class ExprBuilder:
         pass
 
     def build_list(self, instr: dis.Instruction):
-        items = self._stack[-instr.arg:]
-        self._stack = self._stack[0:-instr.arg]
+        items = self._stack_pop(instr.arg)
         expr = build_list(*items)
         self._stack.append(expr)
 
     def build_const_key_map(self, _: dis.Instruction):
+        kvps = []
+        keys_tuple = self._stack.pop()
+        kvps = list(zip(keys_tuple, self._stack_pop(len(keys_tuple))))
+        expr = build_dict(*kvps)
+        self._stack.append(expr)
+
+    def call_function(self, instr: dis.Instruction):
+        args = self._stack_pop(instr.arg)
+        func = self._stack.pop()
+        expr = call(func, *args)
+        self._stack.append(expr)
+
+    def call_function_kw(self, _: dis.Instruction):
         kvps = []
         keys_tuple = self._stack.pop()
         keys = list(keys_tuple)
@@ -112,7 +148,9 @@ class ExprBuilder:
             v = self._stack.pop()
             kvps.append((k, v))
         kvps.reverse()
-        expr = build_dict(*kvps)
+        kwargs = dict(kvps)
+        func = self._stack.pop()
+        expr = call(func, **kwargs)
         self._stack.append(expr)
 
 

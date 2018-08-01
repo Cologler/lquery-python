@@ -68,6 +68,7 @@ class Query:
             if self.exprs:
                 chain = []
                 for expr in self.exprs:
+                    # expr should be `CallExpr`
                     assert expr.args and not expr.kwargs
                     args = [expr.value for expr in expr.args[1:]]
                     chain.append((expr.func, args))

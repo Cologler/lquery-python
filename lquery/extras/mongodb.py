@@ -14,7 +14,10 @@ from ..expr import (
     BuildDictExpr, BuildListExpr
 )
 from ..expr_builder import to_lambda_expr
-from ..expr_utils import get_deep_indexes
+from ..expr_utils import (
+    get_deep_indexes,
+    require_argument,
+)
 from ..iterable import PROVIDER as ITERABLE_PROVIDER
 from ..iterable import IterableQuery
 
@@ -95,9 +98,7 @@ class MongoDbQueryImpl:
             return False
 
         lambda_expr = to_lambda_expr(predicate)
-        if len(lambda_expr.args) != 1:
-            return False
-        if lambda_expr:
+        if lambda_expr and len(lambda_expr.args) == 1:
             return self._apply_call_where_by(lambda_expr.body)
         return False
 
@@ -148,6 +149,10 @@ class MongoDbQueryImpl:
             value = right.create()
         elif isinstance(right, BuildListExpr):
             value = right.create()
+        elif isinstance(right, CallExpr):
+            if require_argument(right):
+                return False
+            value = right()
         else:
             return False
 
