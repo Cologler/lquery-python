@@ -127,9 +127,8 @@ class ExprBuilder:
         self._stack.append(expr)
 
     def build_const_key_map(self, _: dis.Instruction):
-        kvps = []
-        keys_tuple = self._stack.pop()
-        kvps = list(zip(keys_tuple, self._stack_pop(len(keys_tuple))))
+        keys = self._stack.pop()
+        kvps = list(zip(keys, self._stack_pop(len(keys))))
         expr = build_dict(*kvps)
         self._stack.append(expr)
 
@@ -140,14 +139,8 @@ class ExprBuilder:
         self._stack.append(expr)
 
     def call_function_kw(self, _: dis.Instruction):
-        kvps = []
-        keys_tuple = self._stack.pop()
-        keys = list(keys_tuple)
-        while keys:
-            k = keys.pop()
-            v = self._stack.pop()
-            kvps.append((k, v))
-        kvps.reverse()
+        keys = self._stack.pop()
+        kvps = list(zip(keys, self._stack_pop(len(keys))))
         kwargs = dict(kvps)
         func = self._stack.pop()
         expr = call(func, **kwargs)
