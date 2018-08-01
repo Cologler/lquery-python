@@ -112,6 +112,17 @@ class MongoDbQueryImpl:
             return True
         return self._apply_call_where_compare(left, right, op)
 
+    _SWAPABLE_OP_MAP = {
+        '==': '==',
+        '>': '<=',
+        '<': '>=',
+        '>=': '<',
+        '<=': '>',
+
+        # magic
+        'in': '-in',
+    }
+
     def _apply_call_where_compare(self, left, right, op):
         left_is_index_expr = isinstance(left, IndexExpr)
         right_is_index_expr = isinstance(right, IndexExpr)
@@ -122,7 +133,10 @@ class MongoDbQueryImpl:
             return False
 
         if not left_is_index_expr:
-            return self._apply_call_where_compare(right, left, op)
+            swaped_op = self._SWAPABLE_OP_MAP.get(op)
+            if swaped_op is None:
+                return False
+            return self._apply_call_where_compare(right, left, swaped_op)
 
         if isinstance(right, ConstExpr):
             value = right.value
@@ -133,6 +147,9 @@ class MongoDbQueryImpl:
         else:
             return False
 
+        if isinstance(value, tuple):
+            # python will auto convert `lambda x: x in ['A', 'B']` to `lambda x: x in ('A', 'B')`
+            value = list(value)
         if not isinstance(value, (str, int, dict, list)):
             return False
 
@@ -160,9 +177,12 @@ class MongoDbQueryImpl:
         fields.reverse()
         return fields
 
-    OP_MAP = {
+    _OP_MAP = {
         '<': '$lt',
         '>': '$gt',
+        '<=': '$lte',
+        '>=': '$gte',
+        'in': '$in',
     }
 
     def _from_op(self, right_value, op):
@@ -171,11 +191,11 @@ class MongoDbQueryImpl:
 
         for example: `(3, '>')` => `{ '$gt': 3 }`
         '''
-        if op == '==' or op == 'in':
+        if op == '==' or op == '-in':
             # in mean item in list
             return right_value
 
-        op = self.OP_MAP.get(op)
+        op = self._OP_MAP.get(op)
         if op is not None:
             return {
                 op: right_value
