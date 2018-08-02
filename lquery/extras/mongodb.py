@@ -42,17 +42,15 @@ class MongoDbQueryImpl:
         self._filter = {}
         self._skip = None
         self._limit = None
-        self._eval_in_sql = []
-        self._eval_in_memory = []
+        self._exprs_in_sql = []
+        self._exprs_in_memory = []
 
-        exprs = []
         for expr in queryable.query.exprs:
             self._accept_sql_query = self._accept_sql_query and self._apply_call(expr)
             if self._accept_sql_query:
-                self._eval_in_sql.append(expr)
+                self._exprs_in_sql.append(expr)
             else:
-                exprs.append(expr)
-                self._eval_in_memory.append(expr)
+                self._exprs_in_memory.append(expr)
 
     def __iter__(self):
         query = self._query or self._build_query()
@@ -60,9 +58,9 @@ class MongoDbQueryImpl:
 
     def get_reduce_info(self):
         reduce_info = ReduceInfo(self._queryable)
-        for expr in self._eval_in_sql:
+        for expr in self._exprs_in_sql:
             reduce_info.add_node(ReduceInfo.TYPE_SQL, expr)
-        for expr in self._eval_in_memory:
+        for expr in self._exprs_in_memory:
             reduce_info.add_node(ReduceInfo.TYPE_MEMORY, expr)
         return reduce_info
 
@@ -77,7 +75,7 @@ class MongoDbQueryImpl:
                 skip=self._skip or 0,
                 limit=self._limit or 0)
         query = IterableQuery(cursor)
-        self._query = ITERABLE_PROVIDER.create_query(query, Query(*self._eval_in_memory))
+        self._query = ITERABLE_PROVIDER.create_query(query, Query(*self._exprs_in_memory))
         return self._query
 
     def _apply_call(self, expr: CallExpr) -> bool:
