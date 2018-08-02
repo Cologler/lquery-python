@@ -5,7 +5,7 @@
 #
 # ----------
 
-from .expr import ConstExpr, AttrExpr
+from .core import ConstExpr, AttrExpr
 
 class ExprVisitor:
     def visit(self, expr):

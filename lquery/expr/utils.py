@@ -6,7 +6,7 @@
 # ----------
 
 from typing import Union
-from .expr import (
+from .core import (
     IExpr,
     ParameterExpr, ConstExpr, AttrExpr, IndexExpr, BinaryExpr, CallExpr, LambdaExpr
 )

@@ -8,7 +8,7 @@
 import dis
 from contextlib import contextmanager
 
-from .expr import (
+from .core import (
     attr, index, BinaryExpr, parameter, lambda_, make, call,
     build_dict, build_list
 )

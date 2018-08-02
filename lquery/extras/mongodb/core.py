@@ -13,12 +13,12 @@ from ...expr import (
     ParameterExpr,
     BuildDictExpr, BuildListExpr
 )
-from ...expr_builder import to_lambda_expr
-from ...expr_utils import (
+from ...expr.builder import to_lambda_expr
+from ...expr.utils import (
     get_deep_names,
     require_argument,
 )
-from ...expr_visitor import DefaultExprVisitor
+from ...expr.visitor import DefaultExprVisitor
 from ...iterable import PROVIDER as ITERABLE_PROVIDER
 from ...iterable import IterableQuery
 
