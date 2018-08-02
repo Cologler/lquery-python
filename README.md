@@ -53,3 +53,33 @@ query: Queryable = MongoDbQuery(collection)
 * `skip`
 
 read more examples from unittests.
+
+## Others
+
+### print reduce info
+
+Print reduce info is easy way to check what query will compile to SQL.
+
+code example:
+
+``` py
+>>> from lquery.extras.mongodb import MongoDbQuery
+>>> mongo_query = MongoDbQuery(None)
+>>> reduce_info = mongo_query\
+...     .where(lambda x: (x['size']['h'] == 14) & (x['size']['uom'] == 'cm'))\
+...     .skip(1)\
+...     .where(lambda x: x['size']['w'] > 15)\
+...     .get_reduce_info()
+>>> reduce_info.print()
+reduce info of:
+  Queryable()
+    .where(<function <lambda> at 0x0000025DBC661EA0>)
+    .skip(1)
+    .where(<function <lambda> at 0x0000025DBE957840>)
+=>
+    [SQL] where(<function <lambda> at 0x0000025DBC661EA0>)
+    [SQL] skip(1)
+    [MEM] where(<function <lambda> at 0x0000025DBE957840>)
+```
+
+you can see the 1st `where()` and 1st `skip()` was success compile to SQL, and 2nd `where()` only work inside python process.
