@@ -134,7 +134,7 @@ class MongoDbQueryImpl:
 
     def _get_updater_by_call_where_binary(self, body: BinaryExpr):
         left, op, right = body.left, body.op, body.right
-        if op == '&':
+        if op in ('&', 'and'):
             lupdater = self._get_updater_by_call_where(left)
             rupdater = self._get_updater_by_call_where(right)
             return lupdater & rupdater

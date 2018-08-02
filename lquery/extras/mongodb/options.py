@@ -66,15 +66,37 @@ class QueryOptionsFilterFieldUpdater(QueryOptionsUpdater):
     def __init__(self):
         self.data = {}
 
+    def _try_merge(self, exists, value):
+        if exists == value:
+            return value
+        if isinstance(exists, dict) and isinstance(value, dict):
+            merged_value = dict(exists)
+            if all(k.startswith('$') for k in exists) and all(k.startswith('$') for k in value):
+                for k in value:
+                    v = value[k]
+                    if k in merged_value:
+                        ev = merged_value[k]
+                        if k == '$gt':
+                            merged_value[k] = max(merged_value[k], v)
+                        elif k == '$lt':
+                            merged_value[k] = min(merged_value[k], v)
+                    else:
+                        merged_value[k] = v
+            return merged_value
+        raise NotSupportError
+
     def add_pairs(self, field_name, value):
         if field_name in self.data:
-            raise NotSupportError
-        self.data[field_name] = value
+            self.data[field_name] = self._try_merge(self.data[field_name], value)
+        else:
+            self.data[field_name] = value
 
     def apply(self, options: QueryOptions):
+        print(self.data)
         for name, value in self.data.items():
-            if options.filter.get(name, value) != value:
-                raise NotSupportError
+            if name in options.filter:
+                exists = options.filter[name]
+                options.filter[name] = self._try_merge(exists, value)
             else:
                 options.filter[name] = value
 

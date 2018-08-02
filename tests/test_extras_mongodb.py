@@ -135,12 +135,11 @@ class TestMongoDbWhereFields(unittest.TestCase):
         mongo_query.where(lambda x: 15 >= x['status']).to_list()
         self.assertDictEqual(fc.filter, {'status': {'$lte': 15}})
 
-    def test_query_select_documents_by_gtlt(self):
+    def test_query_select_documents_by_gt_and_lt(self):
         # TODO
-        return
         fc = FakeCollection()
         mongo_query = QUERY_CLS(fc)
-        mongo_query.where(lambda x: 17 > x['status'] > 15).to_list()
+        mongo_query.where(lambda x: x['status'] < 17 and x['status'] > 15).to_list()
         self.assertDictEqual(fc.filter, {'status': {'$gt': 15, '$lt': 17}})
 
 

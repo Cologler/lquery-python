@@ -9,7 +9,6 @@ import dis
 from contextlib import contextmanager
 
 from .expr import (
-    CallExpr, # for type check
     attr, index, BinaryExpr, parameter, lambda_, make, call,
     build_dict, build_list
 )
@@ -24,10 +23,10 @@ def debug():
     DEBUG = False
 
 class NotSupportError(Exception):
-    def __init__(self, instr: dis.Instruction):
-        self._instr = instr
-        msg = f'not supported instruction: {instr}'
-        super().__init__(msg)
+    def __init__(self, *, msg=None, instr: dis.Instruction=None):
+        if instr:
+            msg = msg or f'not supported instruction: {instr}'
+        super().__init__(msg or '')
 
 
 class ExprBuilder:
@@ -39,14 +38,15 @@ class ExprBuilder:
         self._stack = []
         self._instructions = list(self._bytecode)
         self._instructions_map = dict((v.offset, v) for v in self._instructions)
+        self._instructions_hooks = {}
 
     def _print_stack(self):
-        print(self._stack)
+        print('expr-builder-stack:', self._stack)
 
-    def _not_support(self, instr: dis.Instruction):
+    def _not_support(self, *, msg=None, instr: dis.Instruction=None):
         if DEBUG:
             self._print_stack()
-        raise NotSupportError(instr)
+        raise NotSupportError(msg=msg, instr=instr)
 
     def _stack_pop(self, count):
         if count > 0:
@@ -56,14 +56,26 @@ class ExprBuilder:
         else:
             return []
 
+    def _hook(self, offset, callback):
+        hooks = self._instructions_hooks.get(offset)
+        if not hooks:
+            self._instructions_hooks[offset] = hooks = []
+        hooks.append(callback)
+
     def build(self):
         for instr in self._instructions:
+            hooks = self._instructions_hooks.get(instr.offset)
+            if hooks:
+                for callback in reversed(hooks):
+                    callback()
+                del self._instructions_hooks[instr.offset]
             method_name = instr.opname.lower()
             method = getattr(self, method_name, None)
             if not method:
-                return self._not_support(instr)
+                return self._not_support(instr=instr)
             method(instr)
-        assert len(self._stack) == 1
+        if len(self._stack) != 1:
+            return self._not_support(msg='unknwon return values.')
         body = self._stack.pop()
         expr = lambda_(body, *self._args)
         return expr
@@ -94,7 +106,7 @@ class ExprBuilder:
         if name in builtins:
             self._stack.append(builtins[name])
             return
-        return self._not_support(instr)
+        return self._not_support(instr=instr)
 
     def binary_subscr(self, _: dis.Instruction):
         # index like a[b]
@@ -145,6 +157,46 @@ class ExprBuilder:
         func = self._stack.pop()
         expr = call(func, **kwargs)
         self._stack.append(expr)
+
+    def pop_top(self, _: dis.Instruction):
+        # opcode=1
+        self._stack.pop()
+
+    def rot_two(self, _: dis.Instruction):
+        # opcode=2
+        node = self._stack.pop()
+        self._stack.insert(-1, node)
+
+    def rot_three(self, _: dis.Instruction):
+        # opcode=3
+        node = self._stack.pop()
+        self._stack.insert(-2, node)
+
+    def dup_top(self, _: dis.Instruction):
+        # opcode=4
+        self._stack.append(self._stack[-1])
+
+    def jump_if_false_or_pop(self, instr: dis.Instruction):
+        # opcode=111
+        # If TOS is false, sets the bytecode counter to target and leaves TOS on the stack.
+        # Otherwise (TOS is true), TOS is popped.
+        # mean `and`
+        left = self._stack.pop()
+        def callback():
+            right = self._stack.pop()
+            self._stack.append(BinaryExpr(make(left), make(right), 'and'))
+        self._hook(instr.argval, callback)
+
+    def jump_if_true_or_pop(self, instr: dis.Instruction):
+        # opcode=112
+        # If TOS is true, sets the bytecode counter to target and leaves TOS on the stack.
+        # Otherwise (TOS is false), TOS is popped.
+        # mean `or`
+        left = self._stack.pop()
+        def callback():
+            right = self._stack.pop()
+            self._stack.append(BinaryExpr(make(left), make(right), 'or'))
+        self._hook(instr.argval, callback)
 
 
 def to_lambda_expr(func):
