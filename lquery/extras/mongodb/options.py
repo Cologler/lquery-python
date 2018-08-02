@@ -5,7 +5,7 @@
 #
 # ----------
 
-from .._common import NotSupportError
+from .._common import NotSupportError, AlwaysEmptyError
 
 class QueryOptions:
     def __init__(self):
@@ -77,10 +77,21 @@ class QueryOptionsFilterFieldUpdater(QueryOptionsUpdater):
                     if k in merged_value:
                         ev = merged_value[k]
                         if k == '$gt':
-                            merged_value[k] = max(merged_value[k], v)
+                            merged_value[k] = max(ev, v)
                         elif k == '$lt':
-                            merged_value[k] = min(merged_value[k], v)
+                            merged_value[k] = min(ev, v)
                     else:
+                        # reduce
+                        if k == '$gt':
+                            if '$lt' in merged_value:
+                                ev = merged_value['$lt']
+                                if ev <= v:
+                                    raise AlwaysEmptyError(f'{v} < $value < {ev}')
+                        elif k == '$lt':
+                            if '$gt' in merged_value:
+                                ev = merged_value['$gt']
+                                if ev >= v:
+                                    raise AlwaysEmptyError(f'{ev} < $value < {v}')
                         merged_value[k] = v
             return merged_value
         raise NotSupportError
@@ -92,7 +103,6 @@ class QueryOptionsFilterFieldUpdater(QueryOptionsUpdater):
             self.data[field_name] = value
 
     def apply(self, options: QueryOptions):
-        print(self.data)
         for name, value in self.data.items():
             if name in options.filter:
                 exists = options.filter[name]

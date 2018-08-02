@@ -21,7 +21,7 @@ from ...expr_utils import (
 from ...iterable import PROVIDER as ITERABLE_PROVIDER
 from ...iterable import IterableQuery
 
-from .._common import NotSupportError
+from .._common import NotSupportError, AlwaysEmptyError
 
 from .options import QueryOptions, QueryOptionsUpdater
 
@@ -44,7 +44,6 @@ class MongoDbQueryImpl:
         self._accept_sql_query = True
         self._query = None
         self._always_empty = False
-        self._always_empty_reason = None
         self._exprs_in_sql = []
         self._exprs_in_memory = []
         self._query_options = QueryOptions()
@@ -63,7 +62,7 @@ class MongoDbQueryImpl:
     def get_reduce_info(self):
         reduce_info = ReduceInfo(self._queryable)
         if self._always_empty:
-            reduce_info.set_mode(ReduceInfo.MODE_EMPTY, self._always_empty_reason)
+            reduce_info.set_mode(ReduceInfo.MODE_EMPTY, self._always_empty.reason)
             for expr in self._queryable.query.exprs:
                 reduce_info.add_node(ReduceInfo.TYPE_NOT_EXEC, expr)
         else:
@@ -72,10 +71,6 @@ class MongoDbQueryImpl:
             for expr in self._exprs_in_memory:
                 reduce_info.add_node(ReduceInfo.TYPE_MEMORY, expr)
         return reduce_info
-
-    def _set_always_empty(self, reason: str):
-        self._always_empty = True
-        self._always_empty_reason = reason
 
     def _build_query(self):
         '''
@@ -105,13 +100,16 @@ class MongoDbQueryImpl:
             return True
         except NotSupportError:
             return False
+        except AlwaysEmptyError as always_empty:
+            self._always_empty = always_empty
+            return False
 
     def _apply_call_skip(self, value):
         QueryOptionsUpdater.add_skip(value).apply(self._query_options)
 
     def _apply_call_take(self, value):
         if value == 0:
-            return self._set_always_empty(f'only take {value} item')
+            raise AlwaysEmptyError(f'only take {value} item')
         QueryOptionsUpdater.add_limit(value).apply(self._query_options)
 
     def _apply_call_where(self, predicate):
