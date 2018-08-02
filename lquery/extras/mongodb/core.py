@@ -18,12 +18,16 @@ from ...expr_utils import (
     get_deep_names,
     require_argument,
 )
+from ...expr_visitor import DefaultExprVisitor
 from ...iterable import PROVIDER as ITERABLE_PROVIDER
 from ...iterable import IterableQuery
 
 from .._common import NotSupportError, AlwaysEmptyError
 
 from .options import QueryOptions, QueryOptionsUpdater
+
+
+VISITOR = DefaultExprVisitor()
 
 
 class MongoDbQuery(Queryable):
@@ -131,7 +135,7 @@ class MongoDbQueryImpl:
         raise NotSupportError
 
     def _get_updater_by_call_where_binary(self, body: BinaryExpr):
-        left, op, right = body.left.reduce(), body.op, body.right.reduce()
+        left, op, right = body.left.accept(VISITOR), body.op, body.right.accept(VISITOR)
         if op in ('&', 'and'):
             lupdater = self._get_updater_by_call_where(left)
             rupdater = self._get_updater_by_call_where(right)

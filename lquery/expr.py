@@ -15,8 +15,8 @@ class ExprType(Enum):
 
 
 class IExpr:
-    def reduce(self):
-        return self
+    def accept(self, visitor):
+        return visitor.visit(self)
 
 
 class Expr(IExpr):
@@ -185,13 +185,11 @@ class CallExpr(Expr):
         kwargs = dict((k, self._kwargs[k].value) for k in self._kwargs)
         return self._func(*args, **kwargs)
 
-    def reduce(self):
-        if self._func is getattr:
-            if len(self._args) == 2 and not self._kwargs:
-                attr_expr = self._args[1]
-                if isinstance(attr_expr, ConstExpr) and isinstance(attr_expr.value, str):
-                    return AttrExpr(self._args[0], attr_expr.value)
-        return super().reduce()
+    def accept(self, visitor):
+        args = [x.accept(visitor) for x in self._args]
+        kwargs = dict((k, self._kwargs[k].accept(visitor)) for k in self._kwargs)
+        self_expr = CallExpr(self._func, *args, **kwargs)
+        return visitor.visit_call_expr(self_expr)
 
 
 class LambdaExpr(Expr):
