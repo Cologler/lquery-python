@@ -35,6 +35,20 @@ class MongoDbQuery(Queryable):
         return self._collection
 
 
+class QueryOptions:
+    def __init__(self):
+        self.filter = {}
+        self.skip = None
+        self.limit = None
+
+    def get_cursor(self, collection):
+        cursor = collection.find(
+            filter=self.filter,
+            skip=self.skip or 0,
+            limit=self.limit or 0)
+        return cursor
+
+
 class MongoDbQueryImpl:
     def __init__(self, queryable: Queryable):
         self._queryable = queryable
@@ -46,10 +60,7 @@ class MongoDbQueryImpl:
         self._always_empty_reason = None
         self._exprs_in_sql = []
         self._exprs_in_memory = []
-
-        self._filter = {}
-        self._skip = None
-        self._limit = None
+        self._query_options = QueryOptions()
 
         for expr in queryable.query.exprs:
             self._accept_sql_query = self._accept_sql_query and self._apply_call(expr)
@@ -80,15 +91,17 @@ class MongoDbQueryImpl:
         self._always_empty_reason = reason
 
     def _build_query(self):
-        # build query for in-memory query
+        '''
+        build self._query.
+        '''
         assert self._query is None
+        collection = self._mongodb_query.collection
+        if collection is None:
+            raise ValueError('cannot query with None collection')
         if self._always_empty:
             self._query = ()
         else:
-            cursor = self._mongodb_query.collection.find(
-                filter=self._filter,
-                skip=self._skip or 0,
-                limit=self._limit or 0)
+            cursor = self._query_options.get_cursor(collection)
             query = IterableQuery(cursor)
             self._query = ITERABLE_PROVIDER.create_query(query, Query(*self._exprs_in_memory))
         return self._query
@@ -107,23 +120,23 @@ class MongoDbQueryImpl:
             return False
 
     def _apply_call_skip(self, value):
-        if self._skip is None:
-            self._skip = value
+        if self._query_options.skip is None:
+            self._query_options.skip = value
         else:
-            self._skip += value
+            self._query_options.skip += value
 
     def _apply_call_take(self, value):
         if value == 0:
             self._set_always_empty('only take 0 item')
-        elif self._limit is None:
-            self._limit = value
+        elif self._query_options.limit is None:
+            self._query_options.limit = value
         else:
-            self._limit = min(self._limit, value)
+            self._query_options.limit = min(self._query_options.limit, value)
 
     def _apply_call_where(self, predicate):
         # mongo find() only accept one filter and a limit after it
         # if `limit` is not None, cannot add more predicate.
-        if self._limit is not None or self._skip is not None:
+        if self._query_options.limit is not None or self._query_options.skip is not None:
             raise NotSupportError
 
         lambda_expr = to_lambda_expr(predicate)
@@ -192,7 +205,7 @@ class MongoDbQueryImpl:
         value = self._from_op(value, op)
         if value is None:
             raise NotSupportError
-        data = self._filter
+        data = self._query_options.filter
         indexes, src_expr = get_deep_indexes(left)
         if not isinstance(src_expr, ParameterExpr):
             # since where args == 1, this must be the element.
