@@ -9,10 +9,7 @@ import sys
 import traceback
 import unittest
 
-from lquery import enumerable
 from lquery.extras.mongodb import MongoDbQuery
-
-from lquery.expr_builder import debug as expr_debug
 
 
 QUERY_CLS = MongoDbQuery
@@ -139,13 +136,12 @@ class TestMongoDbWhereFields(unittest.TestCase):
         self.assertDictEqual(fc.filter, {'status': {'$lte': 15}})
 
     def test_query_select_documents_by_gtlt(self):
-        return
         # TODO
-        with expr_debug():
-            fc = FakeCollection()
-            mongo_query = QUERY_CLS(fc)
-            mongo_query.where(lambda x: 17 > x['status'] > 15).to_list()
-            self.assertDictEqual(fc.filter, {'status': {'$gt': 15}})
+        return
+        fc = FakeCollection()
+        mongo_query = QUERY_CLS(fc)
+        mongo_query.where(lambda x: 17 > x['status'] > 15).to_list()
+        self.assertDictEqual(fc.filter, {'status': {'$gt': 15, '$lt': 17}})
 
 
 class TestMongoDbWhereFieldEqDoc(unittest.TestCase):

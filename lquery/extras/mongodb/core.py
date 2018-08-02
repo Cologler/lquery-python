@@ -5,21 +5,21 @@
 #
 # ----------
 
-from ..func import where, skip, take
-from ..query import Query
-from ..queryable import Queryable, QueryProvider, ReduceInfo
-from ..expr import (
+from ...func import where, skip, take
+from ...query import Query
+from ...queryable import Queryable, QueryProvider, ReduceInfo
+from ...expr import (
     BinaryExpr, IndexExpr, ConstExpr, CallExpr, Expr,
     ParameterExpr,
     BuildDictExpr, BuildListExpr
 )
-from ..expr_builder import to_lambda_expr
-from ..expr_utils import (
+from ...expr_builder import to_lambda_expr
+from ...expr_utils import (
     get_deep_indexes,
     require_argument,
 )
-from ..iterable import PROVIDER as ITERABLE_PROVIDER
-from ..iterable import IterableQuery
+from ...iterable import PROVIDER as ITERABLE_PROVIDER
+from ...iterable import IterableQuery
 
 class NotSupportError(Exception):
     pass
