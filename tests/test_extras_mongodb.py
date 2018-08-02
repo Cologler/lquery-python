@@ -76,7 +76,7 @@ class TestMongoDbGettingStartedExamples(unittest.TestCase):
         self.assertDictEqual(fc.filter, {'tags': ["red", "blank"]})
 
 
-class TestMongoDbWhereFieldEq(unittest.TestCase):
+class TestMongoDbWhereFields(unittest.TestCase):
 
     def test_query_select_documents_by_eq(self):
         fc = FakeCollection()
@@ -90,6 +90,63 @@ class TestMongoDbWhereFieldEq(unittest.TestCase):
         mongo_query.where(lambda x: 'D' == x['status']).to_list()
         self.assertDictEqual(fc.filter, {'status': 'D'})
 
+    def test_query_select_documents_by_gt(self):
+        fc = FakeCollection()
+        mongo_query = QUERY_CLS(fc)
+        mongo_query.where(lambda x: x['status'] > 15).to_list()
+        self.assertDictEqual(fc.filter, {'status': {'$gt': 15}})
+
+    def test_query_select_documents_by_gt_reversed(self):
+        fc = FakeCollection()
+        mongo_query = QUERY_CLS(fc)
+        mongo_query.where(lambda x: 15 < x['status']).to_list()
+        self.assertDictEqual(fc.filter, {'status': {'$gt': 15}})
+
+    def test_query_select_documents_by_lt(self):
+        fc = FakeCollection()
+        mongo_query = QUERY_CLS(fc)
+        mongo_query.where(lambda x: x['status'] < 15).to_list()
+        self.assertDictEqual(fc.filter, {'status': {'$lt': 15}})
+
+    def test_query_select_documents_by_lt_reversed(self):
+        fc = FakeCollection()
+        mongo_query = QUERY_CLS(fc)
+        mongo_query.where(lambda x: 15 > x['status']).to_list()
+        self.assertDictEqual(fc.filter, {'status': {'$lt': 15}})
+
+    def test_query_select_documents_by_ge(self):
+        fc = FakeCollection()
+        mongo_query = QUERY_CLS(fc)
+        mongo_query.where(lambda x: x['status'] >= 15).to_list()
+        self.assertDictEqual(fc.filter, {'status': {'$gte': 15}})
+
+    def test_query_select_documents_by_ge_reversed(self):
+        fc = FakeCollection()
+        mongo_query = QUERY_CLS(fc)
+        mongo_query.where(lambda x: 15 <= x['status']).to_list()
+        self.assertDictEqual(fc.filter, {'status': {'$gte': 15}})
+
+    def test_query_select_documents_by_le(self):
+        fc = FakeCollection()
+        mongo_query = QUERY_CLS(fc)
+        mongo_query.where(lambda x: x['status'] <= 15).to_list()
+        self.assertDictEqual(fc.filter, {'status': {'$lte': 15}})
+
+    def test_query_select_documents_by_le_reversed(self):
+        fc = FakeCollection()
+        mongo_query = QUERY_CLS(fc)
+        mongo_query.where(lambda x: 15 >= x['status']).to_list()
+        self.assertDictEqual(fc.filter, {'status': {'$lte': 15}})
+
+    def test_query_select_documents_by_gtlt(self):
+        return
+        # TODO
+        with expr_debug():
+            fc = FakeCollection()
+            mongo_query = QUERY_CLS(fc)
+            mongo_query.where(lambda x: 17 > x['status'] > 15).to_list()
+            self.assertDictEqual(fc.filter, {'status': {'$gt': 15}})
+
 
 class TestMongoDbWhereFieldEqDoc(unittest.TestCase):
 
@@ -102,7 +159,7 @@ class TestMongoDbWhereFieldEqDoc(unittest.TestCase):
     def test_query_select_documents_by_doc_ref(self):
         fc = FakeCollection()
         mongo_query = QUERY_CLS(fc)
-        obj = { 'h': 14, 'w': 21, 'uom': 'cm' }
+        obj = {'h': 14, 'w': 21, 'uom': 'cm'}
         mongo_query.where(lambda x: x['size'] == obj).to_list()
         self.assertDictEqual(fc.filter, {'size': obj})
 
@@ -126,7 +183,8 @@ class TestMongoDbWhereFieldIn(unittest.TestCase):
 
     def test_query_select_documents_by_in(self):
         '''
-        The $in operator selects the documents where the value of a field equals any value in the specified array.
+        The $in operator selects the documents where
+        the value of a field equals any value in the specified array.
 
         match `x['status']` equals `A` or `x['status']` equals `B`
         '''
@@ -134,7 +192,7 @@ class TestMongoDbWhereFieldIn(unittest.TestCase):
         mongo_query = QUERY_CLS(fc)
         mongo_query.where(lambda x: x['status'] in ['A', 'B']).to_list()
         # x['status'] in ['A', 'B', 'C'] mean:
-        self.assertDictEqual(fc.filter, {'status': { '$in': ['A', 'B']}})
+        self.assertDictEqual(fc.filter, {'status': {'$in': ['A', 'B']}})
 
     def test_query_select_documents_by_in_reversed(self):
         '''
