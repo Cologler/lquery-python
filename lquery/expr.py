@@ -43,6 +43,9 @@ class ParameterExpr(Expr):
     def __str__(self):
         return self._name
 
+    def __repr__(self):
+        return f'ParameterExpr({repr(self._name)})'
+
 
 class ConstExpr(Expr):
     def __init__(self, value):
@@ -54,6 +57,9 @@ class ConstExpr(Expr):
 
     def __str__(self):
         return repr(self._value)
+
+    def __repr__(self):
+        return f'ParameterExpr({repr(self._value)})'
 
 
 class AttrExpr(Expr):
@@ -77,6 +83,9 @@ class AttrExpr(Expr):
     def __str__(self):
         return f'{str(self._expr)}.{self._attr}'
 
+    def __repr__(self):
+        return f'AttrExpr({repr(self._expr)}, {repr(self._name)})'
+
 
 class IndexExpr(Expr):
     '''
@@ -98,6 +107,9 @@ class IndexExpr(Expr):
 
     def __str__(self):
         return f'{str(self._expr)}[{repr(self._name)}]'
+
+    def __repr__(self):
+        return f'IndexExpr({repr(self._expr)}, {repr(self._name)})'
 
 
 class BinaryExpr(Expr):
@@ -132,6 +144,9 @@ class BinaryExpr(Expr):
     def __str__(self):
         op = self.OP_MAP.get(self._op, self._op)
         return f'{str(self._left)} {op} {str(self._right)}'
+
+    def __repr__(self):
+        return f'BinaryExpr({repr(self._left)}, {repr(self._right)}, {repr(self._op)})'
 
 
 class CallExpr(Expr):
