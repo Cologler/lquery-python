@@ -39,11 +39,13 @@ class MongoDbQueryImpl:
         self._accept_sql_query = True
         self._query = None
         self._always_empty = False
+        self._always_empty_reason = None
+        self._exprs_in_sql = []
+        self._exprs_in_memory = []
+
         self._filter = {}
         self._skip = None
         self._limit = None
-        self._exprs_in_sql = []
-        self._exprs_in_memory = []
 
         for expr in queryable.query.exprs:
             self._accept_sql_query = self._accept_sql_query and self._apply_call(expr)
@@ -58,24 +60,33 @@ class MongoDbQueryImpl:
 
     def get_reduce_info(self):
         reduce_info = ReduceInfo(self._queryable)
-        for expr in self._exprs_in_sql:
-            reduce_info.add_node(ReduceInfo.TYPE_SQL, expr)
-        for expr in self._exprs_in_memory:
-            reduce_info.add_node(ReduceInfo.TYPE_MEMORY, expr)
+        if self._always_empty:
+            reduce_info.set_mode(ReduceInfo.MODE_EMPTY, self._always_empty_reason)
+            for expr in self._queryable.query.exprs:
+                reduce_info.add_node(ReduceInfo.TYPE_NOT_EXEC, expr)
+        else:
+            for expr in self._exprs_in_sql:
+                reduce_info.add_node(ReduceInfo.TYPE_SQL, expr)
+            for expr in self._exprs_in_memory:
+                reduce_info.add_node(ReduceInfo.TYPE_MEMORY, expr)
         return reduce_info
+
+    def _set_always_empty(self, reason: str):
+        self._always_empty = True
+        self._always_empty_reason = reason
 
     def _build_query(self):
         # build query for in-memory query
         assert self._query is None
         if self._always_empty:
-            cursor = []
+            self._query = ()
         else:
             cursor = self._mongodb_query.collection.find(
                 filter=self._filter,
                 skip=self._skip or 0,
                 limit=self._limit or 0)
-        query = IterableQuery(cursor)
-        self._query = ITERABLE_PROVIDER.create_query(query, Query(*self._exprs_in_memory))
+            query = IterableQuery(cursor)
+            self._query = ITERABLE_PROVIDER.create_query(query, Query(*self._exprs_in_memory))
         return self._query
 
     def _apply_call(self, expr: CallExpr) -> bool:
@@ -98,7 +109,7 @@ class MongoDbQueryImpl:
 
     def _apply_call_take(self, value):
         if value == 0:
-            self._always_empty = True
+            self._set_always_empty('only take 0 item')
         elif self._limit is None:
             self._limit = value
         else:
@@ -186,7 +197,8 @@ class MongoDbQueryImpl:
             return False
         fname = '.'.join(indexes)
         if data.get(fname, value) != value:
-            self._always_empty = True
+            return False
+            self._set_always_empty(f'set {fname} multi times')
         else:
             data[fname] = value
         return True

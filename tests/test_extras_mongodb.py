@@ -202,18 +202,48 @@ class TestMongoDbQuery(unittest.TestCase):
         self.assertDictEqual(fc.filter, { 'size.h': 14, 'size.uom': "cm" })
 
 
-class TestMongoDbReduceInfo(unittest.TestCase):
-    def test_print_reduce_info(self):
+class TestMongoDbReduce(unittest.TestCase):
+    def test_get_reduce_info(self):
         mongo_query = QUERY_CLS(None) # get reduce info does not require a valid collection.
         reduce_info = mongo_query\
             .where(lambda x: (x['size']['h'] == 14) & (x['size']['uom'] == 'cm'))\
             .skip(1)\
             .where(lambda x: x['size']['w'] > 15)\
             .get_reduce_info()
-        self.assertEqual(len(reduce_info.details), 3)
-        self.assertEqual(reduce_info.details[0].type, reduce_info.TYPE_SQL)
-        self.assertEqual(reduce_info.details[1].type, reduce_info.TYPE_SQL)
-        self.assertEqual(reduce_info.details[2].type, reduce_info.TYPE_MEMORY)
+        self.assertEqual(reduce_info.mode, reduce_info.MODE_NORMAL)
+        self.assertListEqual(
+            [x.type for x in reduce_info.details],
+            [reduce_info.TYPE_SQL, reduce_info.TYPE_SQL, reduce_info.TYPE_MEMORY]
+        )
+
+    def test_reduce_with_take_0_in_sql(self):
+        mongo_query = QUERY_CLS(None)
+        reduce_info = mongo_query\
+            .where(lambda x: (x['size']['h'] == 14) & (x['size']['uom'] == 'cm'))\
+            .skip(1)\
+            .take(0)\
+            .where(lambda x: x['size']['w'] > 15)\
+            .get_reduce_info()
+        self.assertEqual(reduce_info.mode, reduce_info.MODE_EMPTY)
+        self.assertListEqual(
+            [x.type for x in reduce_info.details],
+            [reduce_info.TYPE_NOT_EXEC] * 4
+        )
+
+    def test_reduce_with_take_0_in_memory(self):
+        # take(0) in memory is not be reduce since user can do something in lambda.
+        mongo_query = QUERY_CLS(None)
+        reduce_info = mongo_query\
+            .where(lambda x: (x['size']['h'] == 14) & (x['size']['uom'] == 'cm'))\
+            .skip(1)\
+            .where(lambda x: x['size']['w'] > 15)\
+            .take(0)\
+            .get_reduce_info()
+        self.assertEqual(reduce_info.mode, reduce_info.MODE_NORMAL)
+        self.assertListEqual(
+            [x.type for x in reduce_info.details],
+            [reduce_info.TYPE_SQL, reduce_info.TYPE_SQL, reduce_info.TYPE_MEMORY, reduce_info.TYPE_MEMORY]
+        )
 
 
 def main(argv=None):
