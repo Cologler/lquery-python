@@ -204,8 +204,7 @@ class TestMongoDbQuery(unittest.TestCase):
 
 class TestMongoDbReduceInfo(unittest.TestCase):
     def test_print_reduce_info(self):
-        fc = FakeCollection()
-        mongo_query = QUERY_CLS(fc)
+        mongo_query = QUERY_CLS(None) # get reduce info does not require a valid collection.
         reduce_info = mongo_query\
             .where(lambda x: (x['size']['h'] == 14) & (x['size']['uom'] == 'cm'))\
             .skip(1)\

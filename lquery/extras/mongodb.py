@@ -35,6 +35,8 @@ class MongoDbQueryImpl:
     def __init__(self, queryable: Queryable):
         self._queryable = queryable
         self._mongodb_query = queryable.src or queryable
+
+        self._accept_sql_query = True
         self._query = None
         self._always_empty = False
         self._filter = {}
@@ -45,18 +47,16 @@ class MongoDbQueryImpl:
 
         exprs = []
         for expr in queryable.query.exprs:
-            if self._query is None and not self._apply_call(expr):
-                self._build_query()
-            if self._query is not None:
+            self._accept_sql_query = self._accept_sql_query and self._apply_call(expr)
+            if self._accept_sql_query:
+                self._eval_in_sql.append(expr)
+            else:
                 exprs.append(expr)
                 self._eval_in_memory.append(expr)
-            else:
-                self._eval_in_sql.append(expr)
-        query = self._query or self._build_query()
-        self._query = ITERABLE_PROVIDER.create_query(query, Query(*exprs))
 
     def __iter__(self):
-        return iter(self._query)
+        query = self._query or self._build_query()
+        return iter(query)
 
     def get_reduce_info(self):
         reduce_info = ReduceInfo(self._queryable)
@@ -68,6 +68,7 @@ class MongoDbQueryImpl:
 
     def _build_query(self):
         # build query for in-memory query
+        assert self._query is None
         if self._always_empty:
             cursor = []
         else:
@@ -75,7 +76,8 @@ class MongoDbQueryImpl:
                 filter=self._filter,
                 skip=self._skip or 0,
                 limit=self._limit or 0)
-        self._query = IterableQuery(cursor)
+        query = IterableQuery(cursor)
+        self._query = ITERABLE_PROVIDER.create_query(query, Query(*self._eval_in_memory))
         return self._query
 
     def _apply_call(self, expr: CallExpr) -> bool:
