@@ -49,31 +49,31 @@ class TestMongoDbGettingStartedExamples(unittest.TestCase):
         fc = FakeCollection()
         mongo_query = QUERY_CLS(fc)
         mongo_query.where(lambda x: x['status'] == 'D').to_list()
-        self.assertDictEqual(fc.filter, { 'status': 'D' })
+        self.assertDictEqual(fc.filter, {'status': 'D'})
 
     def test_query_match_an_embedded_document(self):
         fc = FakeCollection()
         mongo_query = QUERY_CLS(fc)
-        mongo_query.where(lambda x: x['size'] == { 'h': 14, 'w': 21, 'uom': 'cm' }).to_list()
-        self.assertDictEqual(fc.filter, { 'size': { 'h': 14, 'w': 21, 'uom': 'cm' } })
+        mongo_query.where(lambda x: x['size'] == {'h': 14, 'w': 21, 'uom': 'cm'}).to_list()
+        self.assertDictEqual(fc.filter, {'size': {'h': 14, 'w': 21, 'uom': 'cm'}})
 
     def test_query_match_a_field_in_an_embedded_document(self):
         fc = FakeCollection()
         mongo_query = QUERY_CLS(fc)
         mongo_query.where(lambda x: x['size']['uom'] == 'in').to_list()
-        self.assertDictEqual(fc.filter, { "size.uom": "in" })
+        self.assertDictEqual(fc.filter, {"size.uom": "in"})
 
     def test_query_match_an_element_in_an_array(self):
         fc = FakeCollection()
         mongo_query = QUERY_CLS(fc)
         mongo_query.where(lambda x: 'item' in x['list']).to_list()
-        self.assertDictEqual(fc.filter, { 'list': 'item' })
+        self.assertDictEqual(fc.filter, {'list': 'item'})
 
     def test_query_match_an_array_exactly(self):
         fc = FakeCollection()
         mongo_query = QUERY_CLS(fc)
-        mongo_query.where(lambda x: x['tags'] == ["red", "blank"] ).to_list()
-        self.assertDictEqual(fc.filter, { 'tags': ["red", "blank"] })
+        mongo_query.where(lambda x: x['tags'] == ["red", "blank"]).to_list()
+        self.assertDictEqual(fc.filter, {'tags': ["red", "blank"]})
 
 
 class TestMongoDbWhereFieldEq(unittest.TestCase):
@@ -82,13 +82,13 @@ class TestMongoDbWhereFieldEq(unittest.TestCase):
         fc = FakeCollection()
         mongo_query = QUERY_CLS(fc)
         mongo_query.where(lambda x: x['status'] == 'D').to_list()
-        self.assertDictEqual(fc.filter, { 'status': 'D' })
+        self.assertDictEqual(fc.filter, {'status': 'D'})
 
     def test_query_select_documents_by_eq_reversed(self):
         fc = FakeCollection()
         mongo_query = QUERY_CLS(fc)
         mongo_query.where(lambda x: 'D' == x['status']).to_list()
-        self.assertDictEqual(fc.filter, { 'status': 'D' })
+        self.assertDictEqual(fc.filter, {'status': 'D'})
 
 
 class TestMongoDbWhereFieldEqDoc(unittest.TestCase):
@@ -104,7 +104,7 @@ class TestMongoDbWhereFieldEqDoc(unittest.TestCase):
         mongo_query = QUERY_CLS(fc)
         obj = { 'h': 14, 'w': 21, 'uom': 'cm' }
         mongo_query.where(lambda x: x['size'] == obj).to_list()
-        self.assertDictEqual(fc.filter, { 'size': obj })
+        self.assertDictEqual(fc.filter, {'size': obj})
 
     def test_query_select_documents_by_doc_dict(self):
         # arguments of dict not use `x`, we can call it in `where()` !
@@ -134,7 +134,7 @@ class TestMongoDbWhereFieldIn(unittest.TestCase):
         mongo_query = QUERY_CLS(fc)
         mongo_query.where(lambda x: x['status'] in ['A', 'B']).to_list()
         # x['status'] in ['A', 'B', 'C'] mean:
-        self.assertDictEqual(fc.filter, { 'status': { '$in': ['A', 'B'] } })
+        self.assertDictEqual(fc.filter, {'status': { '$in': ['A', 'B']}})
 
     def test_query_select_documents_by_in_reversed(self):
         '''
@@ -143,7 +143,7 @@ class TestMongoDbWhereFieldIn(unittest.TestCase):
         fc = FakeCollection()
         mongo_query = QUERY_CLS(fc)
         mongo_query.where(lambda x: 'D' in x['status']).to_list()
-        self.assertDictEqual(fc.filter, { 'status': 'D' })
+        self.assertDictEqual(fc.filter, {'status': 'D'})
 
 
 class TestMongoDbQuery(unittest.TestCase):
@@ -181,25 +181,25 @@ class TestMongoDbQuery(unittest.TestCase):
         fc = FakeCollection()
         mongo_query = QUERY_CLS(fc)
         mongo_query.where(lambda x: x['name'] > 1).to_list()
-        self.assertDictEqual(fc.filter, { 'name': { '$gt': 1 } })
+        self.assertDictEqual(fc.filter, {'name': {'$gt': 1}})
 
     def test_query_field_less_than(self):
         fc = FakeCollection()
         mongo_query = QUERY_CLS(fc)
         mongo_query.where(lambda x: x['name'] < 1).to_list()
-        self.assertDictEqual(fc.filter, { 'name': { '$lt': 1 } })
+        self.assertDictEqual(fc.filter, {'name': {'$lt': 1}})
 
     def test_query_embedded_doc_field_multi_where(self):
         fc = FakeCollection()
         mongo_query = QUERY_CLS(fc)
         mongo_query.where(lambda x: x['size']['h'] == 14).where(lambda x: x['size']['uom'] == 'cm').to_list()
-        self.assertDictEqual(fc.filter, { 'size.h': 14, 'size.uom': "cm" })
+        self.assertDictEqual(fc.filter, {'size.h': 14, 'size.uom': "cm"})
 
     def test_query_embedded_doc_field_with_and(self):
         fc = FakeCollection()
         mongo_query = QUERY_CLS(fc)
         mongo_query.where(lambda x: (x['size']['h'] == 14) & (x['size']['uom'] == 'cm')).to_list()
-        self.assertDictEqual(fc.filter, { 'size.h': 14, 'size.uom': "cm" })
+        self.assertDictEqual(fc.filter, {'size.h': 14, 'size.uom': "cm"})
 
 
 class TestMongoDbReduce(unittest.TestCase):

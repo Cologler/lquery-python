@@ -25,16 +25,6 @@ class NotSupportError(Exception):
     pass
 
 
-class MongoDbQuery(Queryable):
-    def __init__(self, collection):
-        super().__init__(None, PROVIDER)
-        self._collection = collection
-
-    @property
-    def collection(self):
-        return self._collection
-
-
 class QueryOptions:
     def __init__(self):
         self.filter = {}
@@ -47,6 +37,83 @@ class QueryOptions:
             skip=self.skip or 0,
             limit=self.limit or 0)
         return cursor
+
+
+class QueryOptionsUpdater:
+    def apply(self, options: QueryOptions):
+        raise NotImplementedError
+
+    @staticmethod
+    def add_skip(value):
+        return QueryOptionsSkipUpdater(value)
+
+    @staticmethod
+    def add_limit(value):
+        return QueryOptionsLimitUpdater(value)
+
+    @staticmethod
+    def add_filter_field(field_name, value):
+        editor = QueryOptionsFilterFieldUpdater()
+        editor.add_pairs(field_name, value)
+        return editor
+
+
+class QueryOptionsSkipUpdater(QueryOptionsUpdater):
+    def __init__(self, value):
+        self._value = value
+
+    def apply(self, options: QueryOptions):
+        if options.skip is None:
+            options.skip = self._value
+        else:
+            options.skip += self._value
+
+
+class QueryOptionsLimitUpdater(QueryOptionsUpdater):
+    def __init__(self, value):
+        self._value = value
+
+    def apply(self, options: QueryOptions):
+        if options.limit is None:
+            options.limit = self._value
+        else:
+            options.limit = min(options.limit, self._value)
+
+
+class QueryOptionsFilterFieldUpdater(QueryOptionsUpdater):
+    def __init__(self):
+        self.data = {}
+
+    def add_pairs(self, field_name, value):
+        if field_name in self.data:
+            raise NotSupportError
+        self.data[field_name] = value
+
+    def apply(self, options: QueryOptions):
+        for name, value in self.data.items():
+            if options.filter.get(name, value) != value:
+                raise NotSupportError
+            else:
+                options.filter[name] = value
+
+    def __and__(self, other):
+        assert isinstance(other, QueryOptionsFilterFieldUpdater)
+        new_editor = QueryOptionsFilterFieldUpdater()
+        for name, value in self.data.items():
+            new_editor.add_pairs(name, value)
+        for name, value in other.data.items():
+            new_editor.add_pairs(name, value)
+        return new_editor
+
+
+class MongoDbQuery(Queryable):
+    def __init__(self, collection):
+        super().__init__(None, PROVIDER)
+        self._collection = collection
+
+    @property
+    def collection(self):
+        return self._collection
 
 
 class MongoDbQueryImpl:
@@ -120,18 +187,12 @@ class MongoDbQueryImpl:
             return False
 
     def _apply_call_skip(self, value):
-        if self._query_options.skip is None:
-            self._query_options.skip = value
-        else:
-            self._query_options.skip += value
+        QueryOptionsUpdater.add_skip(value).apply(self._query_options)
 
     def _apply_call_take(self, value):
         if value == 0:
-            self._set_always_empty('only take 0 item')
-        elif self._query_options.limit is None:
-            self._query_options.limit = value
-        else:
-            self._query_options.limit = min(self._query_options.limit, value)
+            return self._set_always_empty(f'only take {value} item')
+        QueryOptionsUpdater.add_limit(value).apply(self._query_options)
 
     def _apply_call_where(self, predicate):
         # mongo find() only accept one filter and a limit after it
@@ -141,21 +202,24 @@ class MongoDbQueryImpl:
 
         lambda_expr = to_lambda_expr(predicate)
         if lambda_expr and len(lambda_expr.args) == 1:
-            return self._apply_call_where_by(lambda_expr.body)
+            updater = self._get_updater_by_call_where(lambda_expr.body)
+            updater.apply(self._query_options)
+            return
         raise NotSupportError
 
-    def _apply_call_where_by(self, body: Expr):
+    def _get_updater_by_call_where(self, body: Expr):
         if isinstance(body, BinaryExpr):
-            return self._apply_call_where_binary(body)
+            return self._get_updater_by_call_where_binary(body)
         raise NotSupportError
 
-    def _apply_call_where_binary(self, body: BinaryExpr):
+    def _get_updater_by_call_where_binary(self, body: BinaryExpr):
         left, op, right = body.left, body.op, body.right
         if op == '&':
-            self._apply_call_where_by(left)
-            self._apply_call_where_by(right)
+            lupdater = self._get_updater_by_call_where(left)
+            rupdater = self._get_updater_by_call_where(right)
+            return lupdater & rupdater
         else:
-            self._apply_call_where_compare(left, right, op)
+            return self._get_updater_by_call_where_compare(left, right, op)
 
     _SWAPABLE_OP_MAP = {
         '==': '==',
@@ -168,7 +232,7 @@ class MongoDbQueryImpl:
         'in': '-in',
     }
 
-    def _apply_call_where_compare(self, left, right, op):
+    def _get_updater_by_call_where_compare(self, left, right, op):
         left_is_index_expr = isinstance(left, IndexExpr)
         right_is_index_expr = isinstance(right, IndexExpr)
 
@@ -181,7 +245,7 @@ class MongoDbQueryImpl:
             swaped_op = self._SWAPABLE_OP_MAP.get(op)
             if swaped_op is None:
                 raise NotSupportError
-            return self._apply_call_where_compare(right, left, swaped_op)
+            return self._get_updater_by_call_where_compare(right, left, swaped_op)
 
         if isinstance(right, ConstExpr):
             value = right.value
@@ -205,16 +269,13 @@ class MongoDbQueryImpl:
         value = self._from_op(value, op)
         if value is None:
             raise NotSupportError
-        data = self._query_options.filter
         indexes, src_expr = get_deep_indexes(left)
         if not isinstance(src_expr, ParameterExpr):
             # since where args == 1, this must be the element.
             raise NotSupportError
         fname = '.'.join(indexes)
-        if data.get(fname, value) != value:
-            raise NotSupportError
-        else:
-            data[fname] = value
+        updater = QueryOptionsUpdater.add_filter_field(fname, value)
+        return updater
 
     _OP_MAP = {
         '<': '$lt',
