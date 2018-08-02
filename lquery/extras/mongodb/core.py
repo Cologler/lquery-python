@@ -9,13 +9,13 @@ from ...func import where, skip, take
 from ...query import Query
 from ...queryable import Queryable, QueryProvider, ReduceInfo
 from ...expr import (
-    BinaryExpr, IndexExpr, ConstExpr, CallExpr, Expr,
+    BinaryExpr, IndexExpr, ConstExpr, CallExpr, Expr, AttrExpr,
     ParameterExpr,
     BuildDictExpr, BuildListExpr
 )
 from ...expr_builder import to_lambda_expr
 from ...expr_utils import (
-    get_deep_indexes,
+    get_deep_names,
     require_argument,
 )
 from ...iterable import PROVIDER as ITERABLE_PROVIDER
@@ -151,15 +151,15 @@ class MongoDbQueryImpl:
     }
 
     def _get_updater_by_call_where_compare(self, left, right, op):
-        left_is_index_expr = isinstance(left, IndexExpr)
-        right_is_index_expr = isinstance(right, IndexExpr)
+        left_is_prop_expr = isinstance(left, (IndexExpr, AttrExpr))
+        right_is_prop_expr = isinstance(right, (IndexExpr, AttrExpr))
 
-        if not left_is_index_expr and not right_is_index_expr:
+        if not left_is_prop_expr and not right_is_prop_expr:
             raise NotSupportError
-        if left_is_index_expr and right_is_index_expr:
+        if left_is_prop_expr and right_is_prop_expr:
             raise NotSupportError
 
-        if not left_is_index_expr:
+        if not left_is_prop_expr:
             swaped_op = self._SWAPABLE_OP_MAP.get(op)
             if swaped_op is None:
                 raise NotSupportError
@@ -187,7 +187,7 @@ class MongoDbQueryImpl:
         value = self._from_op(value, op)
         if value is None:
             raise NotSupportError
-        indexes, src_expr = get_deep_indexes(left)
+        indexes, src_expr = get_deep_names(left)
         if not isinstance(src_expr, ParameterExpr):
             # since where args == 1, this must be the element.
             raise NotSupportError

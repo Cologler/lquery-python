@@ -68,20 +68,20 @@ class AttrExpr(Expr):
     '''
 
     @typechecked
-    def __init__(self, expr: IExpr, attr: str):
+    def __init__(self, expr: IExpr, name: str):
         self._expr = expr
-        self._attr = attr
+        self._name = name
 
     @property
     def expr(self):
         return self._expr
 
     @property
-    def attr(self):
-        return self._attr
+    def name(self):
+        return self._name
 
     def __str__(self):
-        return f'{str(self._expr)}.{self._attr}'
+        return f'{str(self._expr)}.{self._name}'
 
     def __repr__(self):
         return f'AttrExpr({repr(self._expr)}, {repr(self._name)})'

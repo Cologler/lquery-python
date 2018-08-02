@@ -5,10 +5,26 @@
 # a htlper module for expr.
 # ----------
 
+from typing import Union
 from .expr import (
     IExpr,
     ParameterExpr, ConstExpr, AttrExpr, IndexExpr, BinaryExpr, CallExpr, LambdaExpr
 )
+
+def _get_attrs(expr, types, attr):
+    fields = []
+    cur_expr = expr
+    while isinstance(cur_expr, types):
+        fields.append(getattr(cur_expr, attr))
+        cur_expr = cur_expr.expr
+    fields.reverse()
+    return fields, cur_expr
+
+def get_deep_names(expr: Union[AttrExpr, IndexExpr]):
+    return _get_attrs(expr, (AttrExpr, IndexExpr), 'name')
+
+def get_deep_attrs(attr_expr: AttrExpr):
+    return _get_attrs(attr_expr, AttrExpr, 'name')
 
 def get_deep_indexes(index_expr: IndexExpr):
     '''
@@ -16,13 +32,7 @@ def get_deep_indexes(index_expr: IndexExpr):
 
     `IndexExpr(x.a['size']['h'])` -> `['size', 'h'], AttrExpr(x.a)`.
     '''
-    fields = []
-    cur_expr = index_expr
-    while isinstance(cur_expr, IndexExpr):
-        fields.append(cur_expr.name)
-        cur_expr = cur_expr.expr
-    fields.reverse()
-    return fields, cur_expr
+    return _get_attrs(index_expr, IndexExpr, 'name')
 
 def require_argument(expr: IExpr) -> bool:
     '''
