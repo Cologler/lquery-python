@@ -73,30 +73,32 @@ class TestMongoDbGettingStartedExamples(unittest.TestCase):
         self.assertDictEqual(fc.filter, {'tags': ["red", "blank"]})
 
 
-class TestMongoDbWhereFields(unittest.TestCase):
-
-    def test_query_select_documents_by_eq_dictstyle(self):
+class TestWhereStyle(unittest.TestCase):
+    def test_dict_style(self):
         fc = FakeCollection()
         mongo_query = QUERY_CLS(fc)
         mongo_query.where(lambda x: x['status'] == 'D').to_list()
         self.assertDictEqual(fc.filter, {'status': 'D'})
 
-    def test_query_select_documents_by_eq_attrstyle(self):
+    def test_attr_style(self):
         fc = FakeCollection()
         mongo_query = QUERY_CLS(fc)
         mongo_query.where(lambda x: x.status == 'D').to_list()
         self.assertDictEqual(fc.filter, {'status': 'D'})
 
-    def test_query_select_documents_by_eq_reversed_dictstyle(self):
+
+class TestMongoDbWhereFields(unittest.TestCase):
+
+    def test_query_select_documents_by_eq(self):
+        fc = FakeCollection()
+        mongo_query = QUERY_CLS(fc)
+        mongo_query.where(lambda x: x['status'] == 'D').to_list()
+        self.assertDictEqual(fc.filter, {'status': 'D'})
+
+    def test_query_select_documents_by_eq_reversed(self):
         fc = FakeCollection()
         mongo_query = QUERY_CLS(fc)
         mongo_query.where(lambda x: 'D' == x['status']).to_list()
-        self.assertDictEqual(fc.filter, {'status': 'D'})
-
-    def test_query_select_documents_by_eq_reversed_attrstyle(self):
-        fc = FakeCollection()
-        mongo_query = QUERY_CLS(fc)
-        mongo_query.where(lambda x: 'D' == x.status).to_list()
         self.assertDictEqual(fc.filter, {'status': 'D'})
 
     def test_query_select_documents_by_gt(self):
