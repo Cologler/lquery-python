@@ -5,4 +5,5 @@
 #
 # ----------
 
-from .core import MongoDbQuery
+class NotSupportError(Exception):
+    pass
