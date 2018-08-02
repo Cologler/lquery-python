@@ -60,26 +60,4 @@ class Query:
         call_expr = call(to_memory, parameter('self'))
         return self.then(call_expr)
 
-    def compile(self):
-        '''
-        compile the query as memory call.
-        '''
-        if self._reduced_func is None:
-            if self.exprs:
-                chain = []
-                for expr in self.exprs:
-                    # expr should be `CallExpr`
-                    assert expr.args and not expr.kwargs
-                    args = [expr.value for expr in expr.args[1:]]
-                    chain.append((expr.func, args))
-                def func(src):
-                    for fn, args in chain:
-                        src = fn(src, *args)
-                    return src
-            else:
-                def func(src):
-                    return src
-            self._reduced_func = func
-        return self._reduced_func
-
 EMPTY = Query()

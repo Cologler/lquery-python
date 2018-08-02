@@ -6,14 +6,16 @@
 # ----------
 
 from abc import abstractmethod
-from typing import Optional
+from typing import Optional, Callable
 from collections import namedtuple
 
 from typeguard import typechecked
 from asq import query as Q
 from asq.selectors import identity
 
+from .expr import parameter, call, CallExpr
 from .query import Query, EMPTY
+from .func import where, select, select_many, take, skip, to_memory
 
 class IQueryable:
     '''
@@ -95,13 +97,18 @@ class IQueryProvider:
         '''
         return ReduceInfo(queryable)
 
+    @abstractmethod
+    def then_query(self, queryable: IQueryable, query_expr) -> IQueryable:
+        raise NotImplementedError
+
 
 class Queryable(IQueryable):
     @typechecked
-    def __init__(self, src: Optional[IQueryable], provider: IQueryProvider, query: Query = EMPTY):
+    def __init__(self, src: Optional[IQueryable], provider: IQueryProvider, query: Query = EMPTY, *, expr: CallExpr=None):
         self._src = src
         self._provider = provider
         self._query = query
+        self._expr = expr
 
     @property
     def src(self):
@@ -112,6 +119,10 @@ class Queryable(IQueryable):
     def query(self):
         '''get the assigned `Query`.'''
         return self._query
+
+    @property
+    def expr(self):
+        return self._expr
 
     def __str__(self):
         src_str = 'Queryable(?)' if self._src is None else str(self._src)
@@ -129,34 +140,40 @@ class Queryable(IQueryable):
     def to_dict(self, key_selector=identity, value_selector=identity):
         return Q(self).to_dictionary(key_selector, value_selector)
 
-    def update_query(self, query):
-        '''
-        return a new queryable with the query.
-        '''
-        # pylint: disable=C0123
-        src = self._src or self
-        return Queryable(src, self._provider, query)
+    def _then_query(self, call_expr):
+        return self._provider.then_query(self, call_expr)
 
-    def where(self, func):
-        return self.update_query(self._query.where(func))
+    @typechecked
+    def where(self, predicate: Callable):
+        call_expr = call(where, parameter('self'), predicate)
+        return self._then_query(call_expr)
 
-    def select(self, func):
-        return self.update_query(self._query.select(func))
+    @typechecked
+    def select(self, selector: Callable):
+        call_expr = call(select, parameter('self'), selector)
+        return self._then_query(call_expr)
 
-    def select_many(self, collection_selector=identity, result_selector=identity):
-        return self.update_query(self._query.select_many(collection_selector, result_selector))
+    @typechecked
+    def select_many(self, collection_selector: Callable=identity, result_selector: Callable=identity):
+        call_expr = call(select_many, parameter('self'), collection_selector, result_selector)
+        return self._then_query(call_expr)
 
+    @typechecked
     def take(self, count: int):
-        return self.update_query(self._query.take(count))
+        call_expr = call(take, parameter('self'), count)
+        return self._then_query(call_expr)
 
+    @typechecked
     def skip(self, count: int):
-        return self.update_query(self._query.skip(count))
+        call_expr = call(skip, parameter('self'), count)
+        return self._then_query(call_expr)
 
     def to_memory(self):
         '''
         force iter in memory.
         '''
-        return self.update_query(self._query.to_memory())
+        call_expr = call(to_memory, parameter('self'))
+        return self._then_query(call_expr)
 
     def get_reduce_info(self):
         '''
@@ -167,10 +184,7 @@ class Queryable(IQueryable):
 
 class QueryProvider(IQueryProvider):
 
-    def _execute_in_memory(self, queryable: Queryable):
-        if queryable.src is None:
-            # when src is None, mean queryable is root.
-            # the provider should implement this
-            raise NotImplementedError('cannot execute query from None')
-        fn = queryable.query.compile()
-        return fn(queryable.src)
+    def then_query(self, queryable: Queryable, query_expr):
+        query = queryable.query.then(query_expr)
+        src = queryable.src or queryable
+        return Queryable(src, self, query, expr=query_expr)
