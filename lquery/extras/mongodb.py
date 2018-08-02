@@ -9,7 +9,7 @@ from ..func import where, skip, take
 from ..query import Query
 from ..queryable import Queryable, QueryProvider, ReduceInfo
 from ..expr import (
-    BinaryExpr, IndexExpr, ConstExpr, call, parameter, CallExpr, Expr,
+    BinaryExpr, IndexExpr, ConstExpr, CallExpr, Expr,
     ParameterExpr,
     BuildDictExpr, BuildListExpr
 )
@@ -20,6 +20,10 @@ from ..expr_utils import (
 )
 from ..iterable import PROVIDER as ITERABLE_PROVIDER
 from ..iterable import IterableQuery
+
+class NotSupportError(Exception):
+    pass
+
 
 class MongoDbQuery(Queryable):
     def __init__(self, collection):
@@ -91,21 +95,22 @@ class MongoDbQueryImpl:
 
     def _apply_call(self, expr: CallExpr) -> bool:
         func = expr.func
-        if func is where:
-            return self._apply_call_where(expr.args[1].value)
-        if func is skip:
-            return self._apply_call_skip(expr.args[1].value)
-        if func is take:
-            return self._apply_call_take(expr.args[1].value)
-        # for unhandled call, return False to create memory query.
-        return False
+        try:
+            if func is where:
+                self._apply_call_where(expr.args[1].value)
+            elif func is skip:
+                self._apply_call_skip(expr.args[1].value)
+            elif func is take:
+                self._apply_call_take(expr.args[1].value)
+            return True
+        except NotSupportError:
+            return False
 
     def _apply_call_skip(self, value):
         if self._skip is None:
             self._skip = value
         else:
             self._skip += value
-        return True
 
     def _apply_call_take(self, value):
         if value == 0:
@@ -114,33 +119,30 @@ class MongoDbQueryImpl:
             self._limit = value
         else:
             self._limit = min(self._limit, value)
-        return True
 
     def _apply_call_where(self, predicate):
         # mongo find() only accept one filter and a limit after it
         # if `limit` is not None, cannot add more predicate.
         if self._limit is not None or self._skip is not None:
-            return False
+            raise NotSupportError
 
         lambda_expr = to_lambda_expr(predicate)
         if lambda_expr and len(lambda_expr.args) == 1:
             return self._apply_call_where_by(lambda_expr.body)
-        return False
+        raise NotSupportError
 
     def _apply_call_where_by(self, body: Expr):
         if isinstance(body, BinaryExpr):
             return self._apply_call_where_binary(body)
-        return False
+        raise NotSupportError
 
     def _apply_call_where_binary(self, body: BinaryExpr):
         left, op, right = body.left, body.op, body.right
         if op == '&':
-            if not self._apply_call_where_by(left):
-                return False
-            if not self._apply_call_where_by(right):
-                return False
-            return True
-        return self._apply_call_where_compare(left, right, op)
+            self._apply_call_where_by(left)
+            self._apply_call_where_by(right)
+        else:
+            self._apply_call_where_compare(left, right, op)
 
     _SWAPABLE_OP_MAP = {
         '==': '==',
@@ -158,14 +160,14 @@ class MongoDbQueryImpl:
         right_is_index_expr = isinstance(right, IndexExpr)
 
         if not left_is_index_expr and not right_is_index_expr:
-            return False
+            raise NotSupportError
         if left_is_index_expr and right_is_index_expr:
-            return False
+            raise NotSupportError
 
         if not left_is_index_expr:
             swaped_op = self._SWAPABLE_OP_MAP.get(op)
             if swaped_op is None:
-                return False
+                raise NotSupportError
             return self._apply_call_where_compare(right, left, swaped_op)
 
         if isinstance(right, ConstExpr):
@@ -176,32 +178,30 @@ class MongoDbQueryImpl:
             value = right.create()
         elif isinstance(right, CallExpr):
             if require_argument(right):
-                return False
+                raise NotSupportError
             value = right()
         else:
-            return False
+            raise NotSupportError
 
         if isinstance(value, tuple):
             # python will auto convert `lambda x: x in ['A', 'B']` to `lambda x: x in ('A', 'B')`
             value = list(value)
         if not isinstance(value, (str, int, dict, list)):
-            return False
+            raise NotSupportError
 
         value = self._from_op(value, op)
         if value is None:
-            return False
+            raise NotSupportError
         data = self._filter
         indexes, src_expr = get_deep_indexes(left)
         if not isinstance(src_expr, ParameterExpr):
             # since where args == 1, this must be the element.
-            return False
+            raise NotSupportError
         fname = '.'.join(indexes)
         if data.get(fname, value) != value:
-            return False
-            self._set_always_empty(f'set {fname} multi times')
+            raise NotSupportError
         else:
             data[fname] = value
-        return True
 
     _OP_MAP = {
         '<': '$lt',
@@ -222,10 +222,12 @@ class MongoDbQueryImpl:
             return right_value
 
         op = self._OP_MAP.get(op)
-        if op is not None:
-            return {
-                op: right_value
-            }
+        if op is None:
+            raise NotSupportError
+
+        return {
+            op: right_value
+        }
 
 
 class MongoDbQueryProvider(QueryProvider):
