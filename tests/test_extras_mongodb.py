@@ -80,10 +80,25 @@ class TestWhereStyle(unittest.TestCase):
         mongo_query.where(lambda x: x['status'] == 'D').to_list()
         self.assertDictEqual(fc.filter, {'status': 'D'})
 
+    def test_dict_style_ref_key(self):
+        k = 'status'
+        fc = FakeCollection()
+        mongo_query = QUERY_CLS(fc)
+        mongo_query.where(lambda x: x[k] == 'D').to_list()
+        self.assertDictEqual(fc.filter, {'status': 'D'})
+
     def test_attr_style(self):
         fc = FakeCollection()
         mongo_query = QUERY_CLS(fc)
         mongo_query.where(lambda x: x.status == 'D').to_list()
+        self.assertDictEqual(fc.filter, {'status': 'D'})
+
+    def test_attr_style_ref_key(self):
+        # now we can reduce getattr(x, k) to x.k !
+        k = 'status'
+        fc = FakeCollection()
+        mongo_query = QUERY_CLS(fc)
+        mongo_query.where(lambda x: getattr(x, k) == 'D').to_list()
         self.assertDictEqual(fc.filter, {'status': 'D'})
 
 

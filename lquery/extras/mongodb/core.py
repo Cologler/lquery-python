@@ -131,7 +131,7 @@ class MongoDbQueryImpl:
         raise NotSupportError
 
     def _get_updater_by_call_where_binary(self, body: BinaryExpr):
-        left, op, right = body.left, body.op, body.right
+        left, op, right = body.left.reduce(), body.op, body.right.reduce()
         if op in ('&', 'and'):
             lupdater = self._get_updater_by_call_where(left)
             rupdater = self._get_updater_by_call_where(right)

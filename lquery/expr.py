@@ -185,6 +185,14 @@ class CallExpr(Expr):
         kwargs = dict((k, self._kwargs[k].value) for k in self._kwargs)
         return self._func(*args, **kwargs)
 
+    def reduce(self):
+        if self._func is getattr:
+            if len(self._args) == 2 and not self._kwargs:
+                attr_expr = self._args[1]
+                if isinstance(attr_expr, ConstExpr) and isinstance(attr_expr.value, str):
+                    return AttrExpr(self._args[0], attr_expr.value)
+        return super().reduce()
+
 
 class LambdaExpr(Expr):
     def __init__(self, body : IExpr, *args: List[IExpr]):

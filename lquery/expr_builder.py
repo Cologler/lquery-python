@@ -103,6 +103,8 @@ class ExprBuilder:
             self._stack.append(self._func.__globals__[name])
             return
         builtins = self._func.__globals__['__builtins__']
+        if not isinstance(builtins, dict):
+            builtins = vars(builtins)
         if name in builtins:
             self._stack.append(builtins[name])
             return
