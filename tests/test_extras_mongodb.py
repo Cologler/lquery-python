@@ -202,6 +202,21 @@ class TestMongoDbQuery(unittest.TestCase):
         self.assertDictEqual(fc.filter, { 'size.h': 14, 'size.uom': "cm" })
 
 
+class TestMongoDbReduceInfo(unittest.TestCase):
+    def test_print_reduce_info(self):
+        fc = FakeCollection()
+        mongo_query = QUERY_CLS(fc)
+        reduce_info = mongo_query\
+            .where(lambda x: (x['size']['h'] == 14) & (x['size']['uom'] == 'cm'))\
+            .skip(1)\
+            .where(lambda x: x['size']['w'] > 15)\
+            .get_reduce_info()
+        self.assertEqual(len(reduce_info.details), 3)
+        self.assertEqual(reduce_info.details[0].type, reduce_info.TYPE_SQL)
+        self.assertEqual(reduce_info.details[1].type, reduce_info.TYPE_SQL)
+        self.assertEqual(reduce_info.details[2].type, reduce_info.TYPE_MEMORY)
+
+
 def main(argv=None):
     if argv is None:
         argv = sys.argv

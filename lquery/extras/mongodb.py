@@ -7,7 +7,7 @@
 
 from ..func import where, skip, take
 from ..query import Query
-from ..queryable import Queryable, QueryProvider
+from ..queryable import Queryable, QueryProvider, ReduceInfo
 from ..expr import (
     BinaryExpr, IndexExpr, ConstExpr, call, parameter, CallExpr, Expr,
     ParameterExpr,
@@ -33,12 +33,15 @@ class MongoDbQuery(Queryable):
 
 class MongoDbQueryImpl:
     def __init__(self, queryable: Queryable):
+        self._queryable = queryable
         self._mongodb_query = queryable.src or queryable
         self._query = None
         self._always_empty = False
         self._filter = {}
         self._skip = None
         self._limit = None
+        self._eval_in_sql = []
+        self._eval_in_memory = []
 
         exprs = []
         for expr in queryable.query.exprs:
@@ -46,11 +49,22 @@ class MongoDbQueryImpl:
                 self._build_query()
             if self._query is not None:
                 exprs.append(expr)
+                self._eval_in_memory.append(expr)
+            else:
+                self._eval_in_sql.append(expr)
         query = self._query or self._build_query()
         self._query = ITERABLE_PROVIDER.create_query(query, Query(*exprs))
 
     def __iter__(self):
         return iter(self._query)
+
+    def get_reduce_info(self):
+        reduce_info = ReduceInfo(self._queryable)
+        for expr in self._eval_in_sql:
+            reduce_info.add_node(ReduceInfo.TYPE_SQL, expr)
+        for expr in self._eval_in_memory:
+            reduce_info.add_node(ReduceInfo.TYPE_MEMORY, expr)
+        return reduce_info
 
     def _build_query(self):
         # build query for in-memory query
@@ -206,6 +220,10 @@ class MongoDbQueryProvider(QueryProvider):
 
     def execute(self, queryable: Queryable):
         return MongoDbQueryImpl(queryable)
+
+    def get_reduce_info(self, queryable: Queryable):
+        impl = MongoDbQueryImpl(queryable)
+        return impl.get_reduce_info()
 
 
 PROVIDER = MongoDbQueryProvider()
