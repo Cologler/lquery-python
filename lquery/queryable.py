@@ -156,7 +156,7 @@ class IQueryProvider:
 
 class Queryable(IQueryable):
     @typechecked
-    def __init__(self, src: Optional[IQueryable], provider: IQueryProvider, querys: Querys):
+    def __init__(self, src: Optional[IQueryable], provider: IQueryProvider, querys: Querys=EMPTY_QUERYS):
         self._src = src
         self._provider = provider
         self._querys = querys

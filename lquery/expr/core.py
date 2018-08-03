@@ -103,6 +103,9 @@ class AttrExpr(Expr):
     def __repr__(self):
         return f'AttrExpr({repr(self._expr)}, {repr(self._name)})'
 
+    def accept(self, visitor):
+        return visitor.visit_attr_expr(self)
+
 
 class IndexExpr(Expr):
     '''
@@ -127,10 +130,13 @@ class IndexExpr(Expr):
         return self._key
 
     def __str__(self):
-        return f'{str(self._expr)}[{repr(self._key)}]'
+        return f'{str(self._expr)}[{self._key}]'
 
     def __repr__(self):
         return f'IndexExpr({repr(self._expr)}, {repr(self._key)})'
+
+    def accept(self, visitor):
+        return visitor.visit_index_expr(self)
 
 
 class BinaryExpr(Expr):
@@ -169,6 +175,9 @@ class BinaryExpr(Expr):
     def __repr__(self):
         return f'BinaryExpr({repr(self._left)}, {repr(self._right)}, {repr(self._op)})'
 
+    def accept(self, visitor):
+        return visitor.visit_binary_expr(self)
+
 
 class CallExpr(Expr):
     def __init__(self, func: Callable, *args: List[IExpr], **kwargs: Dict[str, IExpr]):
@@ -206,11 +215,11 @@ class CallExpr(Expr):
         kwargs = dict((k, self._kwargs[k].value) for k in self._kwargs)
         return self._func(*args, **kwargs)
 
+    def __repr__(self):
+        return f'CallExpr({self})'
+
     def accept(self, visitor):
-        args = [x.accept(visitor) for x in self._args]
-        kwargs = dict((k, self._kwargs[k].accept(visitor)) for k in self._kwargs)
-        self_expr = CallExpr(self._func, *args, **kwargs)
-        return visitor.visit_call_expr(self_expr)
+        return visitor.visit_call_expr(self)
 
 
 class FuncExpr(Expr):
@@ -230,6 +239,12 @@ class FuncExpr(Expr):
     def __str__(self):
         args_str = ', '.join(str(x) for x in self._args)
         return f'lambda {args_str}: {self._body}'
+
+    def __repr__(self):
+        return f'FuncExpr({repr(self._body)}, {repr(self._args)})'
+
+    def accept(self, visitor):
+        return visitor.visit_func_expr(self)
 
 
 class BuildListExpr(Expr):

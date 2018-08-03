@@ -217,13 +217,15 @@ class ExprBuilder:
         self._hook(instr.argval, callback)
 
 
-def to_lambda_expr(func):
+def to_func_expr(func):
     '''
-    try compile a call expr to a lambda expr.
+    try compile a `callable` to a lambda expr.
 
     return `None` when convert fail.
     '''
     assert callable(func)
+    if DEBUG:
+        print('parsing func: ', func)
     try:
         expr = ExprBuilder(func).build()
     except NotSupportError as err:
@@ -231,5 +233,6 @@ def to_lambda_expr(func):
             print(err)
         return None
     if DEBUG:
-        print('expr: ', expr)
+        print('str(expr) : ', expr)
+        print('repr(expr): ', repr(expr))
     return expr

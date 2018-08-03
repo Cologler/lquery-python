@@ -14,7 +14,7 @@ from ...expr import (
     ParameterExpr,
     BuildDictExpr, BuildListExpr
 )
-from ...expr.builder import to_lambda_expr
+from ...expr.builder import to_func_expr
 from ...expr.utils import (
     get_deep_names,
     require_argument,
@@ -96,7 +96,7 @@ class MongoDbQueryImpl:
         if self._query_options.limit is not None or self._query_options.skip is not None:
             raise NotSupportError
 
-        lambda_expr = to_lambda_expr(predicate)
+        lambda_expr = to_func_expr(predicate)
         if lambda_expr and len(lambda_expr.args) == 1:
             updater = self._get_updater_by_call_where(lambda_expr.body)
             updater.apply(self._query_options)
