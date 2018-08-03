@@ -8,7 +8,8 @@
 from typing import Union
 from .core import (
     IExpr,
-    ParameterExpr, ConstExpr, ReferenceExpr, AttrExpr, IndexExpr, BinaryExpr, CallExpr, LambdaExpr, ValueExpr
+    ParameterExpr, ConstExpr, ReferenceExpr, AttrExpr,
+    IndexExpr, BinaryExpr, CallExpr, FuncExpr, ValueExpr
 )
 
 def _get_attrs(expr, types, attr):
@@ -60,6 +61,6 @@ def require_argument(expr: IExpr) -> bool:
         return require_argument(expr_type.left) or require_argument(expr_type.right)
     if expr_type is CallExpr:
         return any(require_argument(a) for a in list(expr.args) + list(expr.kwargs.values()))
-    if expr_type is LambdaExpr:
+    if expr_type is FuncExpr:
         raise NotImplementedError
     raise NotImplementedError('any others ?')

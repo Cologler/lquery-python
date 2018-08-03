@@ -213,7 +213,7 @@ class CallExpr(Expr):
         return visitor.visit_call_expr(self_expr)
 
 
-class LambdaExpr(Expr):
+class FuncExpr(Expr):
     def __init__(self, body : IExpr, *args: List[IExpr]):
         super().__init__()
         self._body = body
@@ -321,4 +321,4 @@ class Make:
 
     @staticmethod
     def func(body : IExpr, *args: List[IExpr]):
-        return LambdaExpr(body, *args)
+        return FuncExpr(body, *args)
