@@ -26,10 +26,7 @@ class EmptyQueryProvider(QueryProvider):
         '''
         get reduce info in console.
         '''
-        if queryable.src:
-            info: ReduceInfo = queryable.src.get_reduce_info()
-        else:
-            info = ReduceInfo(queryable)
+        info = ReduceInfo(queryable)
         info.set_mode(ReduceInfo.MODE_EMPTY, queryable.reason)
         for expr in queryable.querys.exprs:
             info.add_node(ReduceInfo.TYPE_NOT_EXEC, expr)

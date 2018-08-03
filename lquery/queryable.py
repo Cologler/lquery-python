@@ -65,7 +65,7 @@ class ReduceInfo:
     }
 
     def __init__(self, queryable: IQueryable):
-        self._querable = queryable
+        self.querable = queryable # need to set from stack top.
         self._details = []
         self._mode = self.MODE_NORMAL
         self._mode_reason = None
@@ -102,7 +102,7 @@ class ReduceInfo:
             reduce_info_str = f'    all query was skiped since always empty: {self._mode_reason}'
         else:
             raise NotImplementedError
-        print(f'reduce info of:\n  {self._querable}\n=>\n{reduce_info_str}')
+        print(f'reduce info of:\n  {self.querable}\n=>\n{reduce_info_str}')
 
 
 class IQueryProvider:
@@ -113,11 +113,12 @@ class IQueryProvider:
     def execute(self, queryable: IQueryable):
         raise NotImplementedError
 
+    @abstractmethod
     def get_reduce_info(self, queryable: IQueryable) -> ReduceInfo:
         '''
         get reduce info in console.
         '''
-        return ReduceInfo(queryable)
+        raise NotImplementedError
 
     @abstractmethod
     def then_query(self, queryable: IQueryable, query_expr) -> IQueryable:
@@ -147,7 +148,10 @@ class Queryable(IQueryable):
         return None
 
     def __str__(self):
-        src_str = 'Queryable(?)' if self._src is None else str(self._src)
+        src = self
+        while src.src:
+            src = src.src
+        src_str = str(src)
         lines = [src_str]
         for expr in self._querys.exprs:
             lines.append(expr.to_str(is_method=True))
@@ -205,6 +209,17 @@ class Queryable(IQueryable):
 
 
 class QueryProvider(IQueryProvider):
+
+    def get_reduce_info(self, queryable: IQueryable) -> ReduceInfo:
+        '''
+        get reduce info in console.
+        '''
+        if queryable.src:
+            info: ReduceInfo = queryable.src.get_reduce_info()
+            info.querable = queryable
+        else:
+            info = ReduceInfo(queryable)
+        return info
 
     def then_query(self, queryable: Queryable, query_expr):
         querys = queryable.querys.then(query_expr)

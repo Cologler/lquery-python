@@ -34,10 +34,13 @@ VISITOR = DefaultExprVisitor()
 
 
 class MongoDbQuery(Queryable):
-    def __init__(self, collection, *, query_options=None, querys=EMPTY_QUERYS):
-        super().__init__(None, PROVIDER, querys)
+    def __init__(self, collection, *, src=None, query_options=None, querys=EMPTY_QUERYS):
+        super().__init__(src, PROVIDER, querys)
         self._collection = collection
         self._query_options = query_options or QueryOptions()
+
+    def __str__(self):
+        return f'Queryable({self._collection})'
 
     def __iter__(self):
         cursor = self._query_options.get_cursor(self._collection)
@@ -203,12 +206,9 @@ class MongoDbQueryProvider(QueryProvider):
         '''
         get reduce info in console.
         '''
-        if queryable.src:
-            info: ReduceInfo = queryable.src.get_reduce_info()
-        else:
-            info = ReduceInfo(queryable)
-        for expr in queryable.querys.exprs:
-            info.add_node(ReduceInfo.TYPE_SQL, expr)
+        info = super().get_reduce_info(queryable)
+        if queryable.expr:
+            info.add_node(ReduceInfo.TYPE_SQL, queryable.expr)
         return info
 
     def then_query(self, queryable: MongoDbQuery, query_expr):
@@ -219,7 +219,7 @@ class MongoDbQueryProvider(QueryProvider):
         if impl.always_empty:
             return EmptyQuery(querys, impl.always_empty.reason)
         if apply:
-            return MongoDbQuery(queryable.collection, query_options=query_options, querys=querys)
+            return MongoDbQuery(queryable.collection, src=queryable, query_options=query_options, querys=querys)
         else:
             return ITERABLE_PROVIDER.then_query(queryable, query_expr)
 

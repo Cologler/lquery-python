@@ -61,10 +61,7 @@ class IterableQueryProvider(QueryProvider):
         '''
         get reduce info in console.
         '''
-        if queryable.src:
-            info: ReduceInfo = queryable.src.get_reduce_info()
-        else:
-            info = ReduceInfo(queryable)
+        info = super().get_reduce_info(queryable)
         if queryable.expr:
             info.add_node(ReduceInfo.TYPE_MEMORY, queryable.expr)
         return info
