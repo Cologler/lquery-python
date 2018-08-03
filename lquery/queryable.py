@@ -5,7 +5,7 @@
 #
 # ----------
 
-from abc import abstractmethod
+from abc import abstractmethod, abstractproperty
 from typing import Optional, Callable
 from collections import namedtuple
 
@@ -14,14 +14,36 @@ from asq import query as Q
 from asq.selectors import identity
 
 from .expr import parameter, call, CallExpr
-from .query import Query, EMPTY
 from .func import where, select, select_many, take, skip, to_memory
 
 class IQueryable:
     '''
     interface of `Queryable`
     '''
-    pass
+    @abstractproperty
+    def src(self):
+        raise NotImplementedError
+
+
+class Querys:
+    def __init__(self, *exprs):
+        self._exprs = exprs
+
+    def __str__(self):
+        return '.'.join(x.to_str(is_method=True) for x in self._exprs)
+
+    def __add__(self, other):
+        return Querys(*self._exprs, *other.exprs)
+
+    @property
+    def exprs(self):
+        return self._exprs
+
+    def then(self, call_expr):
+        return Querys(*self._exprs, call_expr)
+
+
+EMPTY_QUERYS = Querys()
 
 
 ReduceInfoNode = namedtuple('ReduceInfoNode', ['type', 'expr'])
@@ -104,11 +126,10 @@ class IQueryProvider:
 
 class Queryable(IQueryable):
     @typechecked
-    def __init__(self, src: Optional[IQueryable], provider: IQueryProvider, query: Query = EMPTY, *, expr: CallExpr=None):
+    def __init__(self, src: Optional[IQueryable], provider: IQueryProvider, querys: Querys):
         self._src = src
         self._provider = provider
-        self._query = query
-        self._expr = expr
+        self._querys = querys
 
     @property
     def src(self):
@@ -116,18 +137,19 @@ class Queryable(IQueryable):
         return self._src
 
     @property
-    def query(self):
-        '''get the assigned `Query`.'''
-        return self._query
+    def querys(self):
+        return self._querys
 
     @property
     def expr(self):
-        return self._expr
+        if self._querys.exprs:
+            return self._querys.exprs[-1]
+        return None
 
     def __str__(self):
         src_str = 'Queryable(?)' if self._src is None else str(self._src)
         lines = [src_str]
-        for expr in self._query.exprs:
+        for expr in self._querys.exprs:
             lines.append(expr.to_str(is_method=True))
         return '\n    .'.join(lines)
 
@@ -185,6 +207,6 @@ class Queryable(IQueryable):
 class QueryProvider(IQueryProvider):
 
     def then_query(self, queryable: Queryable, query_expr):
-        query = queryable.query.then(query_expr)
+        querys = queryable.querys.then(query_expr)
         src = queryable.src or queryable
-        return Queryable(src, self, query, expr=query_expr)
+        return Queryable(src, self, querys)

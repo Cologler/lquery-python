@@ -5,9 +5,10 @@
 #
 # ----------
 
+import copy
+
 from ...func import where, skip, take
-from ...query import Query
-from ...queryable import Queryable, QueryProvider, ReduceInfo
+from ...queryable import Queryable, QueryProvider, ReduceInfo, Querys, EMPTY_QUERYS
 from ...expr import (
     BinaryExpr, IndexExpr, ConstExpr, CallExpr, Expr, AttrExpr,
     ParameterExpr,
@@ -19,6 +20,8 @@ from ...expr.utils import (
     require_argument,
 )
 from ...expr.visitor import DefaultExprVisitor
+from ...empty import PROVIDER as EMPTY_PROVIDER
+from ...empty import EmptyQuery
 from ...iterable import PROVIDER as ITERABLE_PROVIDER
 from ...iterable import IterableQuery
 
@@ -31,68 +34,36 @@ VISITOR = DefaultExprVisitor()
 
 
 class MongoDbQuery(Queryable):
-    def __init__(self, collection):
-        super().__init__(None, PROVIDER)
+    def __init__(self, collection, *, query_options=None, querys=EMPTY_QUERYS):
+        super().__init__(None, PROVIDER, querys)
         self._collection = collection
+        self._query_options = query_options or QueryOptions()
+
+    def __iter__(self):
+        cursor = self._query_options.get_cursor(self._collection)
+        yield from cursor
 
     @property
     def collection(self):
         return self._collection
 
+    @property
+    def query_options(self):
+        return self._query_options
+
 
 class MongoDbQueryImpl:
-    def __init__(self, queryable: Queryable):
-        self._queryable = queryable
-        self._mongodb_query = queryable.src or queryable
-
+    def __init__(self, query_options):
         self._accept_sql_query = True
         self._query = None
         self._always_empty = False
-        self._exprs_in_sql = []
-        self._exprs_in_memory = []
-        self._query_options = QueryOptions()
+        self._query_options = query_options
 
-        for expr in queryable.query.exprs:
-            self._accept_sql_query = self._accept_sql_query and self._apply_call(expr)
-            if self._accept_sql_query:
-                self._exprs_in_sql.append(expr)
-            else:
-                self._exprs_in_memory.append(expr)
+    @property
+    def always_empty(self):
+        return self._always_empty
 
-    def __iter__(self):
-        query = self._query or self._build_query()
-        return iter(query)
-
-    def get_reduce_info(self):
-        reduce_info = ReduceInfo(self._queryable)
-        if self._always_empty:
-            reduce_info.set_mode(ReduceInfo.MODE_EMPTY, self._always_empty.reason)
-            for expr in self._queryable.query.exprs:
-                reduce_info.add_node(ReduceInfo.TYPE_NOT_EXEC, expr)
-        else:
-            for expr in self._exprs_in_sql:
-                reduce_info.add_node(ReduceInfo.TYPE_SQL, expr)
-            for expr in self._exprs_in_memory:
-                reduce_info.add_node(ReduceInfo.TYPE_MEMORY, expr)
-        return reduce_info
-
-    def _build_query(self):
-        '''
-        build self._query.
-        '''
-        assert self._query is None
-        collection = self._mongodb_query.collection
-        if collection is None:
-            raise ValueError('cannot query with None collection')
-        if self._always_empty:
-            self._query = ()
-        else:
-            cursor = self._query_options.get_cursor(collection)
-            query = IterableQuery(cursor)
-            self._query = ITERABLE_PROVIDER.create_query(query, Query(*self._exprs_in_memory))
-        return self._query
-
-    def _apply_call(self, expr: CallExpr) -> bool:
+    def apply_call(self, expr: CallExpr) -> bool:
         func = expr.func
         try:
             if func is where:
@@ -228,12 +199,29 @@ class MongoDbQueryImpl:
 
 class MongoDbQueryProvider(QueryProvider):
 
-    def execute(self, queryable: Queryable):
-        return MongoDbQueryImpl(queryable)
+    def get_reduce_info(self, queryable: Queryable) -> ReduceInfo:
+        '''
+        get reduce info in console.
+        '''
+        if queryable.src:
+            info: ReduceInfo = queryable.src.get_reduce_info()
+        else:
+            info = ReduceInfo(queryable)
+        for expr in queryable.querys.exprs:
+            info.add_node(ReduceInfo.TYPE_SQL, expr)
+        return info
 
-    def get_reduce_info(self, queryable: Queryable):
-        impl = MongoDbQueryImpl(queryable)
-        return impl.get_reduce_info()
+    def then_query(self, queryable: MongoDbQuery, query_expr):
+        query_options = copy.deepcopy(queryable.query_options)
+        querys = queryable.querys.then(query_expr)
+        impl = MongoDbQueryImpl(query_options)
+        apply = impl.apply_call(query_expr)
+        if impl.always_empty:
+            return EmptyQuery(querys, impl.always_empty.reason)
+        if apply:
+            return MongoDbQuery(queryable.collection, query_options=query_options, querys=querys)
+        else:
+            return ITERABLE_PROVIDER.then_query(queryable, query_expr)
 
 
 PROVIDER = MongoDbQueryProvider()
