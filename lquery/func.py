@@ -187,3 +187,8 @@ def contains(src, value, *args):
 @not_queryable
 def sequence_equal(src, other, *args):
     return query(src).sequence_equal(other, *args)
+
+# %timeit on my PC:
+# `count` in list of NOT_QUERYABLE_FUNCS: 155 ns
+# `count` in set  of NOT_QUERYABLE_FUNCS: 53.8 ns
+NOT_QUERYABLE_FUNCS = frozenset(NOT_QUERYABLE_FUNCS)
