@@ -95,9 +95,8 @@ class ExprBuilder:
 
     def load_deref(self, instr: dis.Instruction):
         # load from closure
-        closure = self._func.__closure__[instr.arg]
-        cell_contents = closure.cell_contents
-        expr = Make.ref(cell_contents)
+        cell = self._func.__closure__[instr.arg]
+        expr = Make.deref(cell)
         self._stack.append(expr)
 
     def load_global(self, instr: dis.Instruction):
@@ -145,15 +144,14 @@ class ExprBuilder:
         pass
 
     def build_list(self, instr: dis.Instruction):
-        item_refs = self._stack_pop(instr.arg)
-        items = [x.value for x in item_refs]
+        items = self._stack_pop(instr.arg)
         expr = Make.build_list(*items)
         self._stack.append(expr)
 
     def build_const_key_map(self, _: dis.Instruction):
-        keys = self._stack.pop().value
-        value_refs = self._stack_pop(len(keys))
-        values = [x.value for x in value_refs]
+        keys_tuple = self._stack.pop().value
+        keys = [Make.const(k) for k in keys_tuple]
+        values = self._stack_pop(len(keys))
         kvps = list(zip(keys, values))
         expr = Make.build_dict(*kvps)
         self._stack.append(expr)

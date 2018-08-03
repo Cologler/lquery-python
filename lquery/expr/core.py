@@ -5,7 +5,7 @@
 #
 # ----------
 
-from typing import List, Dict, Callable
+from typing import List, Dict, Callable, Tuple
 
 from typeguard import typechecked
 
@@ -34,10 +34,10 @@ class ValueExpr(Expr):
         return self._value
 
     def __str__(self):
-        return repr(self._value)
+        return repr(self.value)
 
     def __repr__(self):
-        return f'{type(self).__name__}({repr(self._value)})'
+        return f'{type(self).__name__}({repr(self.value)})'
 
 # classes
 
@@ -77,6 +77,19 @@ class ReferenceExpr(ValueExpr):
     represents value expr for both of immutable and mutable object.
     '''
     pass
+
+
+class DerefExpr(ValueExpr):
+    '''
+    represents value expr for closure variable.
+    '''
+
+    def __init__(self, cell):
+        super().__init__(cell)
+
+    @property
+    def value(self):
+        return self._value.cell_contents
 
 
 class AttrExpr(Expr):
@@ -248,7 +261,7 @@ class FuncExpr(Expr):
 
 
 class BuildListExpr(Expr):
-    def __init__(self, *items):
+    def __init__(self, *items: List[ValueExpr]):
         self._items = items
 
     @property
@@ -256,18 +269,22 @@ class BuildListExpr(Expr):
         return self._items
 
     def __str__(self):
-        kvps_str = ', '.join(f'{repr(v)}' for v in self._items)
-        return f'[{kvps_str}]'
+        items_str = ', '.join(f'{repr(v)}' for v in self._items)
+        return f'[{items_str}]'
+
+    def __repr__(self):
+        items_str = ', '.join(f'{repr(v)}' for v in self._items)
+        return f'BuildListExpr({items_str})'
 
     def create(self):
         '''
         build the dict
         '''
-        return list(self._items)
+        return list([x.value for x in self._items])
 
 
 class BuildDictExpr(Expr):
-    def __init__(self, *kvps):
+    def __init__(self, *kvps: List[Tuple[ValueExpr, ValueExpr]]):
         self._kvps = kvps
 
     @property
@@ -275,7 +292,7 @@ class BuildDictExpr(Expr):
         return self._kvps
 
     def __str__(self):
-        kvps_str = ', '.join(f'{repr(k)}: {repr(v)}' for k, v in self._kvps)
+        kvps_str = ', '.join(f'{repr(k.value)}: {repr(v.value)}' for k, v in self._kvps)
         return f'{{{kvps_str}}}'
 
     def create(self):
@@ -284,7 +301,7 @@ class BuildDictExpr(Expr):
         '''
         d = {}
         for k, v in self._kvps:
-            d[k] = v
+            d[k.value] = v.value
         return d
 
 
@@ -296,6 +313,10 @@ class Make:
     @staticmethod
     def const(value):
         return ConstExpr(value)
+
+    @staticmethod
+    def deref(cell):
+        return DerefExpr(cell)
 
     @staticmethod
     def call(func: Callable, *args: List[IExpr], **kwargs: Dict[str, IExpr]):
