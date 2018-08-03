@@ -9,7 +9,17 @@ from collections import Iterable
 
 from typeguard import typechecked
 
+from .func import NOT_QUERYABLE_FUNCS
 from .queryable import Queryable, QueryProvider, IQueryable, ReduceInfo, EMPTY_QUERYS
+
+def get_func(call_expr):
+    expr = call_expr
+    args = [expr.value for expr in expr.args[1:]]
+    func = expr.func
+    assert expr.args and not expr.kwargs
+    def _func(src):
+        return func(src, *args)
+    return _func
 
 class IterableQuery(Queryable):
     @typechecked
@@ -38,13 +48,7 @@ class IterableQuery2(Queryable):
         compile the query as memory call.
         '''
         if self._reduced_func is None:
-            expr = self.expr
-            args = [expr.value for expr in expr.args[1:]]
-            func = expr.func
-            assert expr.args and not expr.kwargs
-            def _func(src):
-                return func(src, *args)
-            self._reduced_func = _func
+            self._reduced_func = get_func(self.expr)
         return self._reduced_func
 
 
@@ -54,7 +58,7 @@ class IterableQueryProvider(QueryProvider):
         queryable = IterableQuery(src)
         if query:
             for expr in query.exprs:
-                queryable = self.then_query(queryable, expr)
+                queryable = self.execute(queryable, expr)
         return queryable
 
     def get_reduce_info(self, queryable: IQueryable) -> ReduceInfo:
@@ -66,11 +70,13 @@ class IterableQueryProvider(QueryProvider):
             info.add_node(ReduceInfo.TYPE_MEMORY, queryable.expr)
         return info
 
-    def execute(self, queryable: Queryable):
-        yield from queryable
-
-    def then_query(self, queryable: Queryable, query_expr):
-        querys = queryable.querys.then(query_expr)
-        return IterableQuery2(queryable, self, querys)
+    def execute(self, queryable: IQueryable, call_expr):
+        if call_expr.func in NOT_QUERYABLE_FUNCS:
+            func = get_func(call_expr)
+            return func(queryable)
+        else:
+            # other func should return a `IQueryable`
+            querys = queryable.querys.then(call_expr)
+            return IterableQuery2(queryable, self, querys)
 
 PROVIDER = IterableQueryProvider()

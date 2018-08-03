@@ -211,17 +211,17 @@ class MongoDbQueryProvider(QueryProvider):
             info.add_node(ReduceInfo.TYPE_SQL, queryable.expr)
         return info
 
-    def then_query(self, queryable: MongoDbQuery, query_expr):
-        query_options = copy.deepcopy(queryable.query_options)
-        querys = queryable.querys.then(query_expr)
-        impl = MongoDbQueryImpl(query_options)
-        apply = impl.apply_call(query_expr)
-        if impl.always_empty:
-            return EmptyQuery(querys, impl.always_empty.reason)
-        if apply:
-            return MongoDbQuery(queryable.collection, src=queryable, query_options=query_options, querys=querys)
-        else:
-            return ITERABLE_PROVIDER.then_query(queryable, query_expr)
+    def execute(self, queryable: MongoDbQuery, query_expr):
+        if query_expr.func in (where, skip, take):
+            query_options = copy.deepcopy(queryable.query_options)
+            querys = queryable.querys.then(query_expr)
+            impl = MongoDbQueryImpl(query_options)
+            apply = impl.apply_call(query_expr)
+            if impl.always_empty:
+                return EmptyQuery(querys, impl.always_empty.reason)
+            if apply:
+                return MongoDbQuery(queryable.collection, src=queryable, query_options=query_options, querys=querys)
+        return super().execute(queryable, query_expr)
 
 
 PROVIDER = MongoDbQueryProvider()

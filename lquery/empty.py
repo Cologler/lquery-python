@@ -5,7 +5,9 @@
 # a empty queryable
 # ----------
 
-from .queryable import Queryable, QueryProvider, ReduceInfo, EMPTY_QUERYS, ReduceInfo
+from .func import NOT_QUERYABLE_FUNCS
+from .queryable import Queryable, QueryProvider, ReduceInfo, EMPTY_QUERYS
+from .iterable import IterableQueryProvider
 
 class EmptyQuery(Queryable):
     def __init__(self, querys=EMPTY_QUERYS, reason='', **kwargs):
@@ -20,7 +22,7 @@ class EmptyQuery(Queryable):
         return self._reason
 
 
-class EmptyQueryProvider(QueryProvider):
+class EmptyQueryProvider(IterableQueryProvider):
 
     def get_reduce_info(self, queryable: EmptyQuery) -> ReduceInfo:
         '''
@@ -32,8 +34,10 @@ class EmptyQueryProvider(QueryProvider):
             info.add_node(ReduceInfo.TYPE_NOT_EXEC, expr)
         return info
 
-    def then_query(self, queryable: EmptyQuery, query_expr):
-        querys = queryable.querys.then(query_expr)
+    def execute(self, queryable: EmptyQuery, call_expr):
+        if call_expr.func in NOT_QUERYABLE_FUNCS:
+            return super().execute(queryable, call_expr)
+        querys = queryable.querys.then(call_expr)
         return EmptyQuery(querys, queryable.reason)
 
 
