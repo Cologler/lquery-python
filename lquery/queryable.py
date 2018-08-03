@@ -7,7 +7,7 @@
 
 from abc import abstractmethod, abstractproperty
 from typing import Optional, Callable
-from collections import namedtuple
+from collections import namedtuple, Iterable
 import operator
 
 from typeguard import typechecked
@@ -15,7 +15,7 @@ from asq import query as Q
 from asq.selectors import identity
 from asq.namedelements import IndexedElement, KeyedElement
 
-from .expr import parameter, call
+from .expr import Make
 from .func import (
     # not in ASQ
     to_memory,
@@ -76,6 +76,7 @@ ReduceInfoNode = namedtuple('ReduceInfoNode', ['type', 'expr'])
 
 
 class ReduceInfo:
+    # pylint: disable=C0326
     TYPE_MEMORY     = 1
     TYPE_SQL        = 2
     TYPE_NOT_EXEC   = 3
@@ -83,6 +84,7 @@ class ReduceInfo:
     MODE_NORMAL     = 21
     # the query has conflict, so the result always are empty.
     MODE_EMPTY      = 22
+    # pylint: enable=C0326
 
     _PRINT_TABLE = {
         1: 'MEM',
@@ -202,49 +204,55 @@ class Queryable(IQueryable):
         '''
         force iter in memory.
         '''
-        call_expr = call(to_memory, parameter('self'))
+        call_expr = Make.call(to_memory, Make.parameter('self'))
         return self._then_query(call_expr)
 
     # transforms
 
     @typechecked
     def select(self, selector: Callable):
-        call_expr = call(select, parameter('self'), selector)
+        call_expr = Make.call(select, Make.parameter('self'), Make.ref(selector))
         return self._then_query(call_expr)
 
     @typechecked
     def select_with_index(self, selector: Callable=IndexedElement, transform: Callable=identity):
-        call_expr = call(select_with_index, parameter('self'), selector, transform)
+        call_expr = Make.call(select_with_index, Make.parameter('self'),
+            Make.ref(selector), Make.ref(transform))
         return self._then_query(call_expr)
 
     @typechecked
-    def select_with_correspondence(self, selector: Callable, result_selector: Callable=KeyedElement):
-        call_expr = call(select_with_correspondence, parameter('self'), selector, result_selector)
+    def select_with_correspondence(self, selector: Callable,
+                                   result_selector: Callable=KeyedElement):
+        call_expr = Make.call(select_with_correspondence, Make.parameter('self'),
+            Make.ref(selector), Make.ref(result_selector))
         return self._then_query(call_expr)
 
     @typechecked
-    def select_many(self, collection_selector: Callable=identity, result_selector: Callable=identity):
-        call_expr = call(select_many, parameter('self'), collection_selector, result_selector)
+    def select_many(self, collection_selector: Callable=identity,
+                    result_selector: Callable=identity):
+        call_expr = Make.call(select_many, Make.parameter('self'),
+            Make.ref(collection_selector), Make.ref(result_selector))
         return self._then_query(call_expr)
 
     @typechecked
-    def select_many_with_index(self, collection_selector: Callable=IndexedElement,
-            result_selector: Callable=lambda source_element, collection_element: collection_element):
-        call_expr = call(select_many_with_index, parameter('self'),
-            collection_selector, result_selector)
+    def select_many_with_index(self, collection_selector: Callable = IndexedElement,
+            result_selector: Callable = lambda source_element, collection_element: collection_element):
+        call_expr = Make.call(select_many_with_index, Make.parameter('self'),
+            Make.ref(collection_selector), Make.ref(result_selector))
         return self._then_query(call_expr)
 
     @typechecked
     def select_many_with_correspondence(self,
             collection_selector: Callable=identity, result_selector: Callable=KeyedElement):
-        call_expr = call(select_many_with_correspondence, parameter('self'),
-            collection_selector, result_selector)
+        call_expr = Make.call(select_many_with_correspondence, Make.parameter('self'),
+            Make.ref(collection_selector), Make.ref(result_selector))
         return self._then_query(call_expr)
 
     @typechecked
-    def group_by(self, key_selector: Callable=identity,
-            element_selector: Callable=identity, result_selector: Callable=lambda key, grouping: grouping):
-        call_expr = call(group_by, parameter('self'), key_selector, element_selector, result_selector)
+    def group_by(self, key_selector: Callable=identity, element_selector: Callable=identity,
+            result_selector: Callable=lambda key, grouping: grouping):
+        call_expr = Make.call(group_by, Make.parameter('self'),
+            Make.ref(key_selector), Make.ref(element_selector), Make.ref(result_selector))
         return self._then_query(call_expr)
 
     # filter
@@ -254,7 +262,7 @@ class Queryable(IQueryable):
         '''
         Filters elements according to whether they match a predicate.
         '''
-        call_expr = call(where, parameter('self'), predicate)
+        call_expr = Make.call(where, Make.parameter('self'), Make.ref(predicate))
         return self._then_query(call_expr)
 
     @typechecked
@@ -262,174 +270,195 @@ class Queryable(IQueryable):
         '''
         Filters elements according to whether they are of a certain type.
         '''
-        call_expr = call(of_type, parameter('self'), type_)
+        call_expr = Make.call(of_type, Make.parameter('self'), Make.ref(type_))
         return self._then_query(call_expr)
 
     @typechecked
     def take(self, count_: int):
-        call_expr = call(take, parameter('self'), count_)
+        call_expr = Make.call(take, Make.parameter('self'), Make.const(count_))
         return self._then_query(call_expr)
 
     @typechecked
     def take_while(self, predicate: Callable):
-        call_expr = call(take_while, parameter('self'), predicate)
+        call_expr = Make.call(take_while, Make.parameter('self'), Make.ref(predicate))
         return self._then_query(call_expr)
 
     @typechecked
     def skip(self, count_: int):
-        call_expr = call(skip, parameter('self'), count_)
+        call_expr = Make.call(skip, Make.parameter('self'), Make.const(count_))
         return self._then_query(call_expr)
 
     @typechecked
     def skip_while(self, predicate: Callable):
-        call_expr = call(skip_while, parameter('self'), predicate)
+        call_expr = Make.call(skip_while, Make.parameter('self'), Make.ref(predicate))
         return self._then_query(call_expr)
 
     @typechecked
     def distinct(self, selector: Callable=identity):
-        call_expr = call(distinct, parameter('self'), selector)
+        call_expr = Make.call(distinct, Make.parameter('self'), Make.ref(selector))
         return self._then_query(call_expr)
 
     # sort
 
     @typechecked
     def order_by(self, key_selector: Callable=identity):
-        call_expr = call(order_by, parameter('self'), key_selector)
+        call_expr = Make.call(order_by, Make.parameter('self'), Make.ref(key_selector))
         return self._then_query(call_expr)
 
     @typechecked
     def order_by_descending(self, key_selector: Callable=identity):
-        call_expr = call(order_by_descending, parameter('self'), key_selector)
+        call_expr = Make.call(order_by_descending, Make.parameter('self'), Make.ref(key_selector))
         return self._then_query(call_expr)
 
     def reverse(self):
-        call_expr = call(reverse, parameter('self'))
+        call_expr = Make.call(reverse, Make.parameter('self'))
         return self._then_query(call_expr)
 
     # get one element
 
     def default_if_empty(self, default):
-        call_expr = call(default_if_empty, parameter('self'), default)
+        call_expr = Make.call(default_if_empty, Make.parameter('self'), Make.ref(default))
         return self._then_query(call_expr)
 
-    def first(self, predicate=None):
-        call_expr = call(first, parameter('self'), predicate)
+    @typechecked
+    def first(self, predicate: Optional[Callable]=None):
+        call_expr = Make.call(first, Make.parameter('self'), Make.ref(predicate))
         return self._then_query(call_expr)
 
-    def first_or_default(self, default, predicate=None):
-        call_expr = call(first_or_default, parameter('self'), default, predicate)
+    @typechecked
+    def first_or_default(self, default, predicate: Optional[Callable]=None):
+        call_expr = Make.call(first_or_default, Make.parameter('self'), Make.ref(default), Make.ref(predicate))
         return self._then_query(call_expr)
 
-    def last(self, predicate=None):
-        call_expr = call(last, parameter('self'), predicate)
+    @typechecked
+    def last(self, predicate: Optional[Callable]=None):
+        call_expr = Make.call(last, Make.parameter('self'), Make.ref(predicate))
         return self._then_query(call_expr)
 
-    def last_or_default(self, default, predicate=None):
-        call_expr = call(last_or_default, parameter('self'), default, predicate)
+    @typechecked
+    def last_or_default(self, default, predicate: Optional[Callable]=None):
+        call_expr = Make.call(last_or_default, Make.parameter('self'), Make.ref(default), Make.ref(predicate))
         return self._then_query(call_expr)
 
-    def single(self, predicate=None):
-        call_expr = call(single, parameter('self'), predicate)
+    @typechecked
+    def single(self, predicate: Optional[Callable]=None):
+        call_expr = Make.call(single, Make.parameter('self'), Make.ref(predicate))
         return self._then_query(call_expr)
 
-    def single_or_default(self, default, predicate=None):
-        call_expr = call(single_or_default, parameter('self'), default, predicate)
+    @typechecked
+    def single_or_default(self, default, predicate: Optional[Callable]=None):
+        call_expr = Make.call(single_or_default, Make.parameter('self'), Make.ref(default), Make.ref(predicate))
         return self._then_query(call_expr)
 
-    def element_at(self, index):
-        call_expr = call(element_at, parameter('self'), index)
+    @typechecked
+    def element_at(self, index: int):
+        call_expr = Make.call(element_at, Make.parameter('self'), Make.const(index))
         return self._then_query(call_expr)
 
     # get queryable props
 
-    def count(self, predicate=None) -> int:
-        call_expr = call(count, parameter('self'), predicate)
+    @typechecked
+    def count(self, predicate: Optional[Callable]=None) -> int:
+        call_expr = Make.call(count, Make.parameter('self'), Make.ref(predicate))
         return self._then_query(call_expr)
 
     # two collection operations
 
-    def concat(self, second_iterable):
-        call_expr = call(concat, parameter('self'), second_iterable)
+    @typechecked
+    def concat(self, other: Iterable):
+        call_expr = Make.call(concat, Make.parameter('self'), Make.ref(other))
         return self._then_query(call_expr)
 
-    def difference(self, second_iterable, selector=identity):
-        call_expr = call(difference, parameter('self'), second_iterable, selector)
+    @typechecked
+    def difference(self, other: Iterable, selector=identity):
+        call_expr = Make.call(difference, Make.parameter('self'), Make.ref(other), Make.ref(selector))
         return self._then_query(call_expr)
 
-    def intersect(self, second_iterable, selector=identity):
-        call_expr = call(intersect, parameter('self'), second_iterable, selector)
+    @typechecked
+    def intersect(self, other: Iterable, selector=identity):
+        call_expr = Make.call(intersect, Make.parameter('self'), Make.ref(other), Make.ref(selector))
         return self._then_query(call_expr)
 
-    def union(self, second_iterable, selector=identity):
-        call_expr = call(union, parameter('self'), second_iterable, selector)
+    @typechecked
+    def union(self, other: Iterable, selector=identity):
+        call_expr = Make.call(union, Make.parameter('self'), Make.ref(other), Make.ref(selector))
         return self._then_query(call_expr)
 
-    def join(self, inner_iterable, outer_key_selector=identity,
-             inner_key_selector=identity,
-             result_selector=lambda outer, inner: (outer, inner)):
-        call_expr = call(join, parameter('self'),
-            inner_iterable, outer_key_selector, inner_key_selector, result_selector)
+    @typechecked
+    def join(self, inner_iterable: Iterable,
+             outer_key_selector: Callable=identity, inner_key_selector: Callable=identity,
+             result_selector: Callable=lambda outer, inner: (outer, inner)):
+        call_expr = Make.call(join, Make.parameter('self'), Make.ref(inner_iterable),
+                              Make.ref(outer_key_selector), Make.ref(inner_key_selector),
+                              Make.ref(result_selector))
         return self._then_query(call_expr)
 
-    def group_join(self, inner_iterable, outer_key_selector=identity, inner_key_selector=identity,
-                   result_selector=lambda outer, grouping: grouping):
-        call_expr = call(group_join, parameter('self'),
-            inner_iterable, outer_key_selector, inner_key_selector, result_selector)
+    @typechecked
+    def group_join(self, inner_iterable: Iterable,
+                   outer_key_selector: Callable=identity, inner_key_selector: Callable=identity,
+                   result_selector: Callable=lambda outer, grouping: grouping):
+        call_expr = Make.call(group_join, Make.parameter('self'), Make.ref(inner_iterable),
+                              Make.ref(outer_key_selector),
+                              Make.ref(inner_key_selector), Make.ref(result_selector))
         return self._then_query(call_expr)
 
-    def zip(self, second_iterable, result_selector=lambda x, y: (x, y)):
-        call_expr = call(zip, parameter('self'), second_iterable, result_selector)
+    @typechecked
+    def zip(self, other: Iterable, result_selector: Callable=lambda x, y: (x, y)):
+        call_expr = Make.call(zip, Make.parameter('self'), Make.ref(other), Make.ref(result_selector))
         return self._then_query(call_expr)
 
     # for numbers
 
     @typechecked
     def min(self, selector: Callable=identity):
-        call_expr = call(min, parameter('self'), selector)
+        call_expr = Make.call(min, Make.parameter('self'), Make.ref(selector))
         return self._then_query(call_expr)
 
     @typechecked
     def max(self, selector: Callable=identity):
-        call_expr = call(max, parameter('self'), selector)
+        call_expr = Make.call(max, Make.parameter('self'), Make.ref(selector))
         return self._then_query(call_expr)
 
     # aggregates
 
     @typechecked
     def sum(self, selector: Callable=identity):
-        call_expr = call(sum, parameter('self'), selector)
+        call_expr = Make.call(sum, Make.parameter('self'), Make.ref(selector))
         return self._then_query(call_expr)
 
     @typechecked
     def average(self, selector: Callable=identity):
-        call_expr = call(average, parameter('self'), selector)
+        call_expr = Make.call(average, Make.parameter('self'), Make.ref(selector))
         return self._then_query(call_expr)
 
     @typechecked
     def aggregate(self, reducer: Callable, seed, result_selector: Callable=identity):
-        call_expr = call(aggregate, parameter('self'), reducer, seed, result_selector)
+        call_expr = Make.call(aggregate, Make.parameter('self'),
+                              Make.ref(reducer), Make.ref(seed), Make.ref(result_selector))
         return self._then_query(call_expr)
 
     # logic operations
 
     @typechecked
     def any(self, predicate: Callable=None):
-        call_expr = call(any, parameter('self'), predicate)
+        call_expr = Make.call(any, Make.parameter('self'), Make.ref(predicate))
         return self._then_query(call_expr)
 
     @typechecked
     def all(self, predicate: Callable=bool):
-        call_expr = call(all, parameter('self'), predicate)
+        call_expr = Make.call(all, Make.parameter('self'), Make.ref(predicate))
         return self._then_query(call_expr)
 
     @typechecked
     def contains(self, value, equality_comparer: Callable=operator.eq):
-        call_expr = call(contains, parameter('self'), value, equality_comparer)
+        call_expr = Make.call(contains, Make.parameter('self'),
+                              Make.ref(value), Make.ref(equality_comparer))
         return self._then_query(call_expr)
 
     @typechecked
     def sequence_equal(self, other, equality_comparer: Callable=operator.eq) -> bool:
-        call_expr = call(sequence_equal, parameter('self'), other, equality_comparer)
+        call_expr = Make.call(sequence_equal, Make.parameter('self'),
+                              Make.ref(other), Make.ref(equality_comparer))
         return self._then_query(call_expr)
 
     # get iter result

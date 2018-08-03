@@ -8,7 +8,7 @@
 from typing import Union
 from .core import (
     IExpr,
-    ParameterExpr, ConstExpr, AttrExpr, IndexExpr, BinaryExpr, CallExpr, LambdaExpr
+    ParameterExpr, ConstExpr, ReferenceExpr, AttrExpr, IndexExpr, BinaryExpr, CallExpr, LambdaExpr, ValueExpr
 )
 
 def _get_attrs(expr, types, attr):
@@ -21,7 +21,18 @@ def _get_attrs(expr, types, attr):
     return fields, cur_expr
 
 def get_deep_names(expr: Union[AttrExpr, IndexExpr]):
-    return _get_attrs(expr, (AttrExpr, IndexExpr), 'name')
+    fields = []
+    cur_expr = expr
+    while isinstance(cur_expr, (AttrExpr, IndexExpr)):
+        if isinstance(cur_expr, AttrExpr):
+            fields.append(cur_expr.name)
+        elif isinstance(cur_expr.key, ValueExpr):
+            fields.append(cur_expr.key.value)
+        else:
+            break
+        cur_expr = cur_expr.expr
+    fields.reverse()
+    return fields, cur_expr
 
 def get_deep_attrs(attr_expr: AttrExpr):
     return _get_attrs(attr_expr, AttrExpr, 'name')
@@ -41,7 +52,7 @@ def require_argument(expr: IExpr) -> bool:
     expr_type = type(expr)
     if expr_type is ParameterExpr:
         return True
-    if expr_type is ConstExpr:
+    if expr_type in (ConstExpr, ReferenceExpr):
         return False
     if expr_type in (AttrExpr, IndexExpr):
         return require_argument(expr.expr)

@@ -10,7 +10,7 @@ import copy
 from ...func import where, skip, take
 from ...queryable import Queryable, QueryProvider, ReduceInfo, Querys, EMPTY_QUERYS
 from ...expr import (
-    BinaryExpr, IndexExpr, ConstExpr, CallExpr, Expr, AttrExpr,
+    BinaryExpr, IndexExpr, ValueExpr, CallExpr, Expr, AttrExpr,
     ParameterExpr,
     BuildDictExpr, BuildListExpr
 )
@@ -143,7 +143,7 @@ class MongoDbQueryImpl:
                 raise NotSupportError
             return self._get_updater_by_call_where_compare(right, left, swaped_op)
 
-        if isinstance(right, ConstExpr):
+        if isinstance(right, ValueExpr):
             value = right.value
         elif isinstance(right, BuildDictExpr):
             value = right.create()

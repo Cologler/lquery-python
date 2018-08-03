@@ -5,23 +5,41 @@
 #
 # ----------
 
-from enum import Enum
-from typing import List
+from typing import List, Dict, Callable
 
 from typeguard import typechecked
 
-class ExprType(Enum):
-    Attr = 0
-
+# interfaces
 
 class IExpr:
     def accept(self, visitor):
         return visitor.visit(self)
 
+# base classes
 
 class Expr(IExpr):
     pass
 
+
+class ValueExpr(Expr):
+    '''
+    the base class for both of `ConstExpr` and `ReferenceExpr`.
+    '''
+
+    def __init__(self, value):
+        self._value = value
+
+    @property
+    def value(self):
+        return self._value
+
+    def __str__(self):
+        return repr(self._value)
+
+    def __repr__(self):
+        return f'{type(self).__name__}({repr(self._value)})'
+
+# classes
 
 class EmptyExpr(Expr):
     pass
@@ -47,19 +65,18 @@ class ParameterExpr(Expr):
         return f'ParameterExpr({repr(self._name)})'
 
 
-class ConstExpr(Expr):
-    def __init__(self, value):
-        self._value = value
+class ConstExpr(ValueExpr):
+    '''
+    represents value expr for immutable object.
+    '''
+    pass
 
-    @property
-    def value(self):
-        return self._value
 
-    def __str__(self):
-        return repr(self._value)
-
-    def __repr__(self):
-        return f'ParameterExpr({repr(self._value)})'
+class ReferenceExpr(ValueExpr):
+    '''
+    represents value expr for both of immutable and mutable object.
+    '''
+    pass
 
 
 class AttrExpr(Expr):
@@ -93,23 +110,27 @@ class IndexExpr(Expr):
     '''
 
     @typechecked
-    def __init__(self, expr: IExpr, name: str):
+    def __init__(self, expr: IExpr, key: IExpr):
         self._expr = expr
-        self._name = name
+        self._key = key
 
     @property
     def expr(self):
         return self._expr
 
     @property
+    def key(self):
+        return self._key
+
+    @property
     def name(self):
-        return self._name
+        return self._key
 
     def __str__(self):
-        return f'{str(self._expr)}[{repr(self._name)}]'
+        return f'{str(self._expr)}[{repr(self._key)}]'
 
     def __repr__(self):
-        return f'IndexExpr({repr(self._expr)}, {repr(self._name)})'
+        return f'IndexExpr({repr(self._expr)}, {repr(self._key)})'
 
 
 class BinaryExpr(Expr):
@@ -150,8 +171,8 @@ class BinaryExpr(Expr):
 
 
 class CallExpr(Expr):
-    def __init__(self, func, *args, **kwargs):
-        # all item of args and value of kwargs are ConstExpr
+    def __init__(self, func: Callable, *args: List[IExpr], **kwargs: Dict[str, IExpr]):
+        # all item of args and value of kwargs are union(ValueExpr, ParameterExpr)
         super().__init__()
         self._func = func
         self._args = args
@@ -252,65 +273,52 @@ class BuildDictExpr(Expr):
         return d
 
 
-def make(obj) -> IExpr:
-    if isinstance(obj, IExpr):
-        return obj
-    return const(obj)
+class Make:
+    @staticmethod
+    def ref(value):
+        return ReferenceExpr(value)
 
-def and_(left: IExpr, right: IExpr) -> IExpr:
-    '''
-    represents `left and right`
-    '''
-    return BinaryExpr(left, right, '__and__')
+    @staticmethod
+    def const(value):
+        return ConstExpr(value)
 
-def or_(left: IExpr, right: IExpr) -> IExpr:
-    '''
-    represents `left or right`
-    '''
-    return BinaryExpr(left, right, '__or__')
+    @staticmethod
+    def call(func: Callable, *args: List[IExpr], **kwargs: Dict[str, IExpr]):
+        '''
+        create a expr for represents call a function.
+        '''
+        return CallExpr(func, *args, **kwargs)
 
-def equal(left: IExpr, right: IExpr) -> IExpr:
-    '''
-    represents `left == right`
-    '''
-    return BinaryExpr(make(left), make(right), '==')
+    @staticmethod
+    def parameter(name: str):
+        '''
+        create a expr for represents a parameter.
+        '''
+        return ParameterExpr(name)
 
-def greater_than(left: IExpr, right: IExpr, equals: bool = False) -> IExpr:
-    '''
-    represents `left > right` or `left >= right`
-    '''
-    op = '>' if equals else '>='
-    return BinaryExpr(left, right, op)
+    @staticmethod
+    def binary_op(left: IExpr, right: IExpr, op: str):
+        '''
+        create a expr for represents a binary operation.
+        '''
+        return BinaryExpr(left, right, op)
 
-def less_than(left: IExpr, right: IExpr, equals: bool = False) -> IExpr:
-    '''
-    represents `left < right` or `left <= right`
-    '''
-    op = '<' if equals else '<='
-    return BinaryExpr(left, right, op)
+    @staticmethod
+    def attr(expr: IExpr, name: str):
+        return AttrExpr(expr, name)
 
-def call(func, *args, **kwargs):
-    '''
-    represents call a function.
-    '''
-    return CallExpr(func, *[make(x) for x in args], **dict((k, make(kwargs[k])) for k in kwargs))
+    @staticmethod
+    def index(expr: IExpr, key: IExpr):
+        return IndexExpr(expr, key)
 
-def build_dict(*kvps):
-    '''
-    represents build a dict object.
-    '''
-    return BuildDictExpr(*kvps)
+    @staticmethod
+    def build_dict(*kvps):
+        return BuildDictExpr(*kvps)
 
-def build_list(*items):
-    '''
-    represents build a dict object.
-    '''
-    return BuildListExpr(*items)
+    @staticmethod
+    def build_list(*items):
+        return BuildListExpr(*items)
 
-# pylint: disable=C0103
-empty = EmptyExpr
-parameter = ParameterExpr
-const = ConstExpr
-attr = AttrExpr
-index = IndexExpr
-lambda_ = LambdaExpr
+    @staticmethod
+    def func(body : IExpr, *args: List[IExpr]):
+        return LambdaExpr(body, *args)
