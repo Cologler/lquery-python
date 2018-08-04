@@ -16,19 +16,18 @@ from ._common_visitor import DbExprVisitor
 
 class TinyDbQuery(Queryable):
     def __init__(self, table):
-        super().__init__(None, PROVIDER)
-        self._table = table
+        super().__init__(Make.ref(table), PROVIDER)
 
     def __iter__(self):
-        yield from self._table
+        yield from self.expr.value
 
 
 class TinyDbQueryProvider(QueryProvider):
-    def execute(self, queryable, call_expr):
-        if call_expr.func in NOT_QUERYABLE_FUNCS:
-            return super().execute(queryable, call_expr)
-        call_expr = self._get_rewrited_call_expr(call_expr) or call_expr
-        return super().execute(queryable, call_expr)
+    def execute(self, expr):
+        if expr.func in NOT_QUERYABLE_FUNCS:
+            return super().execute(expr)
+        expr = self._get_rewrited_call_expr(expr) or expr
+        return super().execute(expr)
 
     def _get_rewrited_call_expr(self, call_expr):
         if call_expr.func is where:

@@ -15,7 +15,9 @@ def not_queryable(func):
 
     that mean the result of func is not enumerable.
     '''
+    # pylint: disable=E1101
     NOT_QUERYABLE_FUNCS.append(func)
+    # pylint: enable=E1101
     return func
 
 # not in ASQ

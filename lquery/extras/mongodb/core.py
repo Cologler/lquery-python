@@ -8,8 +8,9 @@
 import copy
 
 from ...func import where, skip, take
-from ...queryable import Queryable, QueryProvider, ReduceInfo, Querys, EMPTY_QUERYS
+from ...queryable import Queryable, QueryProvider, ReduceInfo
 from ...expr import (
+    Make,
     BinaryExpr, IndexExpr, ValueExpr, CallExpr, Expr, AttrExpr,
     ParameterExpr,
     BuildDictExpr, BuildListExpr
@@ -33,9 +34,9 @@ from .options import QueryOptions, QueryOptionsUpdater
 VISITOR = DefaultExprVisitor()
 
 
-class MongoDbQuery(Queryable):
-    def __init__(self, collection, *, src=None, query_options=None, querys=EMPTY_QUERYS):
-        super().__init__(src, PROVIDER, querys)
+class MongoDbQueryImpl(Queryable):
+    def __init__(self, expr, collection, query_options):
+        super().__init__(expr, PROVIDER)
         self._collection = collection
         self._query_options = query_options or QueryOptions()
 
@@ -55,7 +56,17 @@ class MongoDbQuery(Queryable):
         return self._query_options
 
 
-class MongoDbQueryImpl:
+class MongoDbQuery(MongoDbQueryImpl):
+    def __init__(self, collection):
+        super().__init__(Make.ref(collection), collection, QueryOptions())
+
+    def get_reduce_info(self):
+        info = ReduceInfo(self)
+        info.add_node(ReduceInfo.TYPE_SRC, self.expr)
+        return info
+
+
+class MongoDbQueryQueryOptionsModifier:
     def __init__(self, query_options):
         self._accept_sql_query = True
         self._query = None
@@ -207,21 +218,21 @@ class MongoDbQueryProvider(QueryProvider):
         get reduce info in console.
         '''
         info = super().get_reduce_info(queryable)
-        if queryable.expr:
-            info.add_node(ReduceInfo.TYPE_SQL, queryable.expr)
+        info.add_node(ReduceInfo.TYPE_SQL, queryable.expr)
         return info
 
-    def execute(self, queryable: MongoDbQuery, query_expr):
-        if query_expr.func in (where, skip, take):
-            query_options = copy.deepcopy(queryable.query_options)
-            querys = queryable.querys.then(query_expr)
-            impl = MongoDbQueryImpl(query_options)
-            apply = impl.apply_call(query_expr)
+    def execute(self, expr):
+        if expr.func in (where, skip, take):
+            queryable = expr.args[0].value
+            query_options = queryable.query_options
+            query_options = copy.deepcopy(query_options)
+            impl = MongoDbQueryQueryOptionsModifier(query_options)
+            apply = impl.apply_call(expr)
             if impl.always_empty:
-                return EmptyQuery(querys, impl.always_empty.reason)
+                return EmptyQuery(expr, impl.always_empty.reason)
             if apply:
-                return MongoDbQuery(queryable.collection, src=queryable, query_options=query_options, querys=querys)
-        return super().execute(queryable, query_expr)
+                return MongoDbQueryImpl(expr, queryable.collection, query_options)
+        return super().execute(expr)
 
 
 PROVIDER = MongoDbQueryProvider()

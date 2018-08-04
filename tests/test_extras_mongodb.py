@@ -316,7 +316,7 @@ class TestMongoDbReduce(unittest.TestCase):
         self.assertEqual(reduce_info.mode, reduce_info.MODE_NORMAL)
         self.assertListEqual(
             [x.type for x in reduce_info.details],
-            [reduce_info.TYPE_SQL, reduce_info.TYPE_SQL, reduce_info.TYPE_MEMORY]
+            [reduce_info.TYPE_SRC] * 1 + [reduce_info.TYPE_SQL] * 2 + [reduce_info.TYPE_MEMORY]
         )
 
     def test_reduce_with_take_0_in_sql(self):
@@ -330,7 +330,7 @@ class TestMongoDbReduce(unittest.TestCase):
         self.assertEqual(reduce_info.mode, reduce_info.MODE_EMPTY)
         self.assertListEqual(
             [x.type for x in reduce_info.details],
-            [reduce_info.TYPE_NOT_EXEC] * 4
+            [reduce_info.TYPE_NOT_EXEC] * 5
         )
 
     def test_reduce_with_take_0_in_memory(self):
@@ -345,7 +345,7 @@ class TestMongoDbReduce(unittest.TestCase):
         self.assertEqual(reduce_info.mode, reduce_info.MODE_NORMAL)
         self.assertListEqual(
             [x.type for x in reduce_info.details],
-            [reduce_info.TYPE_SQL, reduce_info.TYPE_SQL, reduce_info.TYPE_MEMORY, reduce_info.TYPE_MEMORY]
+            [reduce_info.TYPE_SRC] + [reduce_info.TYPE_SQL] * 2 + [reduce_info.TYPE_MEMORY] * 2
         )
 
 

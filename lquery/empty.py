@@ -6,12 +6,12 @@
 # ----------
 
 from .func import NOT_QUERYABLE_FUNCS
-from .queryable import Queryable, QueryProvider, ReduceInfo, EMPTY_QUERYS
+from .queryable import Queryable, ReduceInfo, get_exprs, get_prev_queryable
 from .iterable import IterableQueryProvider
 
 class EmptyQuery(Queryable):
-    def __init__(self, querys=EMPTY_QUERYS, reason='', **kwargs):
-        super().__init__(None, PROVIDER, querys, **kwargs)
+    def __init__(self, expr, reason=''):
+        super().__init__(expr, PROVIDER)
         self._reason = reason
 
     def __iter__(self):
@@ -30,15 +30,14 @@ class EmptyQueryProvider(IterableQueryProvider):
         '''
         info = ReduceInfo(queryable)
         info.set_mode(ReduceInfo.MODE_EMPTY, queryable.reason)
-        for expr in queryable.querys.exprs:
+        for expr in get_exprs(queryable.expr):
             info.add_node(ReduceInfo.TYPE_NOT_EXEC, expr)
         return info
 
-    def execute(self, queryable: EmptyQuery, call_expr):
-        if call_expr.func in NOT_QUERYABLE_FUNCS:
-            return super().execute(queryable, call_expr)
-        querys = queryable.querys.then(call_expr)
-        return EmptyQuery(querys, queryable.reason)
+    def execute(self, expr):
+        if expr.func in NOT_QUERYABLE_FUNCS:
+            return super().execute(expr)
+        return EmptyQuery(expr, get_prev_queryable(expr).reason)
 
 
 PROVIDER = EmptyQueryProvider()

@@ -5,51 +5,43 @@
 # queryable for Iterable
 # ----------
 
+from typing import Union
 from collections import Iterable
 
 from typeguard import typechecked
 
+from .expr import CallExpr, ValueExpr, Make
 from .func import NOT_QUERYABLE_FUNCS
-from .queryable import Queryable, QueryProvider, IQueryable, ReduceInfo, EMPTY_QUERYS
+from .queryable import Queryable, QueryProvider, IQueryable, ReduceInfo
 
-def get_func(call_expr):
-    expr = call_expr
-    args = [expr.value for expr in expr.args[1:]]
-    func = expr.func
-    assert expr.args and not expr.kwargs
-    def _func(src):
-        return func(src, *args)
-    return _func
+def get_result(expr):
+    if type(expr) is CallExpr:
+        args = [get_result(e) for e in expr.args]
+        func = expr.func
+        assert expr.args and not expr.kwargs
+        return func(*args)
+    else:
+        return expr.value
 
-class IterableQuery(Queryable):
+
+class IterableQuery3(Queryable):
+    def __init__(self, expr):
+        super().__init__(expr, PROVIDER)
+
+    def __iter__(self):
+        return iter(get_result(self.expr))
+
+
+class IterableQuery(IterableQuery3):
     @typechecked
     def __init__(self, items: Iterable):
-        super().__init__(None, PROVIDER, EMPTY_QUERYS)
-        self._items = items
-
-    def __iter__(self):
-        return iter(self._items)
+        super().__init__(Make.ref(items))
 
     def __str__(self):
-        return f'Queryable({str(self._items)})'
+        return f'Queryable({self.expr.value})'
 
-
-class IterableQuery2(Queryable):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._reduced_func = None
-
-    def __iter__(self):
-        reduced_func = self._compile()
-        return iter(reduced_func(self.src))
-
-    def _compile(self):
-        '''
-        compile the query as memory call.
-        '''
-        if self._reduced_func is None:
-            self._reduced_func = get_func(self.expr)
-        return self._reduced_func
+    def get_reduce_info(self):
+        return ReduceInfo(self)
 
 
 class IterableQueryProvider(QueryProvider):
@@ -66,17 +58,13 @@ class IterableQueryProvider(QueryProvider):
         get reduce info in console.
         '''
         info = super().get_reduce_info(queryable)
-        if queryable.expr:
-            info.add_node(ReduceInfo.TYPE_MEMORY, queryable.expr)
+        info.add_node(ReduceInfo.TYPE_MEMORY, queryable.expr)
         return info
 
-    def execute(self, queryable: IQueryable, call_expr):
-        if call_expr.func in NOT_QUERYABLE_FUNCS:
-            func = get_func(call_expr)
-            return func(queryable)
-        else:
-            # other func should return a `IQueryable`
-            querys = queryable.querys.then(call_expr)
-            return IterableQuery2(queryable, self, querys)
+    def execute(self, expr: Union[ValueExpr, CallExpr]):
+        if isinstance(expr, CallExpr):
+            if expr.func in NOT_QUERYABLE_FUNCS:
+                return get_result(expr)
+        return IterableQuery3(expr)
 
 PROVIDER = IterableQueryProvider()
