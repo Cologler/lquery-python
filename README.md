@@ -77,6 +77,7 @@ reduce info of:
     .skip(1)
     .where(<function <lambda> at 0x0000025DBE957840>)
 =>
+    [SRC] None
     [SQL] where(<function <lambda> at 0x0000025DBC661EA0>)
     [SQL] skip(1)
     [MEM] where(<function <lambda> at 0x0000025DBE957840>)

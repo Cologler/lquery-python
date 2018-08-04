@@ -136,13 +136,6 @@ class IQueryProvider:
         '''
         raise NotImplementedError
 
-    @abstractmethod
-    def get_reduce_info(self, queryable: IQueryable) -> ReduceInfo:
-        '''
-        get reduce info in console.
-        '''
-        raise NotImplementedError
-
 
 class Queryable(IQueryable):
     @typechecked
@@ -182,7 +175,14 @@ class Queryable(IQueryable):
         '''
         print reduce info in console.
         '''
-        return self._provider.get_reduce_info(self)
+        reduce_info = ReduceInfo(self)
+        for queryable in get_queryables(self.expr):
+            queryable.update_reduce_info(reduce_info)
+        self.update_reduce_info(reduce_info)
+        return reduce_info
+
+    def update_reduce_info(self, reduce_info: ReduceInfo):
+        pass
 
     # not in ASQ
 
@@ -408,19 +408,12 @@ class Queryable(IQueryable):
         return Q(self).to_dictionary(key_selector, value_selector)
 
 
-class QueryProvider(IQueryProvider):
-    def get_reduce_info(self, queryable: IQueryable) -> ReduceInfo:
-        '''
-        get reduce info in console.
-        '''
-        prev_queryable = get_prev_queryable(queryable.expr)
-        if prev_queryable is not queryable:
-            info: ReduceInfo = prev_queryable.get_reduce_info()
-            info.querable = queryable
-        else:
-            info = ReduceInfo(queryable)
-        return info
+class QueryableSource(Queryable):
+    def update_reduce_info(self, reduce_info: ReduceInfo):
+        reduce_info.add_node(ReduceInfo.TYPE_SRC, self.expr)
 
+
+class QueryProvider(IQueryProvider):
     def execute(self, expr: Union[ValueExpr, CallExpr]):
         from .iterable import PROVIDER as ITERABLE_PROVIDER
         return ITERABLE_PROVIDER.execute(expr)

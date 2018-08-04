@@ -12,7 +12,7 @@ from typeguard import typechecked
 
 from .expr import CallExpr, ValueExpr, Make
 from .func import NOT_QUERYABLE_FUNCS
-from .queryable import Queryable, QueryProvider, IQueryable, ReduceInfo
+from .queryable import Queryable, QueryProvider, IQueryable, ReduceInfo, QueryableSource
 
 def get_result(expr):
     if type(expr) is CallExpr:
@@ -31,17 +31,20 @@ class IterableQuery3(Queryable):
     def __iter__(self):
         return iter(get_result(self.expr))
 
+    def update_reduce_info(self, reduce_info):
+        reduce_info.add_node(ReduceInfo.TYPE_MEMORY, self.expr)
 
-class IterableQuery(IterableQuery3):
+
+class IterableQuery(QueryableSource):
     @typechecked
     def __init__(self, items: Iterable):
-        super().__init__(Make.ref(items))
+        super().__init__(Make.ref(items), PROVIDER)
 
     def __str__(self):
         return f'Queryable({self.expr.value})'
 
-    def get_reduce_info(self):
-        return ReduceInfo(self)
+    def __iter__(self):
+        return iter(get_result(self.expr))
 
 
 class IterableQueryProvider(QueryProvider):
@@ -52,14 +55,6 @@ class IterableQueryProvider(QueryProvider):
             for expr in query.exprs:
                 queryable = self.execute(queryable, expr)
         return queryable
-
-    def get_reduce_info(self, queryable: IQueryable) -> ReduceInfo:
-        '''
-        get reduce info in console.
-        '''
-        info = super().get_reduce_info(queryable)
-        info.add_node(ReduceInfo.TYPE_MEMORY, queryable.expr)
-        return info
 
     def execute(self, expr: Union[ValueExpr, CallExpr]):
         if isinstance(expr, CallExpr):

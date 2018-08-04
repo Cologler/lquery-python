@@ -55,15 +55,16 @@ class MongoDbQueryImpl(Queryable):
     def query_options(self):
         return self._query_options
 
+    def update_reduce_info(self, reduce_info: ReduceInfo):
+        reduce_info.add_node(ReduceInfo.TYPE_SQL, self.expr)
+
 
 class MongoDbQuery(MongoDbQueryImpl):
     def __init__(self, collection):
         super().__init__(Make.ref(collection), collection, QueryOptions())
 
-    def get_reduce_info(self):
-        info = ReduceInfo(self)
-        info.add_node(ReduceInfo.TYPE_SRC, self.expr)
-        return info
+    def update_reduce_info(self, reduce_info: ReduceInfo):
+        reduce_info.add_node(ReduceInfo.TYPE_SRC, self.expr)
 
 
 class MongoDbQueryQueryOptionsModifier:
@@ -212,15 +213,6 @@ class MongoDbQueryQueryOptionsModifier:
 
 
 class MongoDbQueryProvider(QueryProvider):
-
-    def get_reduce_info(self, queryable: Queryable) -> ReduceInfo:
-        '''
-        get reduce info in console.
-        '''
-        info = super().get_reduce_info(queryable)
-        info.add_node(ReduceInfo.TYPE_SQL, queryable.expr)
-        return info
-
     def execute(self, expr):
         if expr.func in (where, skip, take):
             queryable = expr.args[0].value

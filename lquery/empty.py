@@ -21,19 +21,18 @@ class EmptyQuery(Queryable):
     def reason(self):
         return self._reason
 
-
-class EmptyQueryProvider(IterableQueryProvider):
-
-    def get_reduce_info(self, queryable: EmptyQuery) -> ReduceInfo:
+    def get_reduce_info(self):
         '''
         get reduce info in console.
         '''
-        info = ReduceInfo(queryable)
-        info.set_mode(ReduceInfo.MODE_EMPTY, queryable.reason)
-        for expr in get_exprs(queryable.expr):
+        info = ReduceInfo(self)
+        info.set_mode(ReduceInfo.MODE_EMPTY, self.reason)
+        for expr in get_exprs(self.expr):
             info.add_node(ReduceInfo.TYPE_NOT_EXEC, expr)
         return info
 
+
+class EmptyQueryProvider(IterableQueryProvider):
     def execute(self, expr):
         if expr.func in NOT_QUERYABLE_FUNCS:
             return super().execute(expr)
