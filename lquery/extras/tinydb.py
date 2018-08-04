@@ -9,7 +9,7 @@ from ..func import NOT_QUERYABLE_FUNCS, where
 from ..queryable import Queryable, QueryProvider
 from ..expr import Make
 from ..expr.builder import to_func_expr
-from ..expr.emiter import emit
+from ..expr.emitter import emit
 
 from ._common_visitor import DbExprVisitor
 

@@ -16,7 +16,7 @@ from .core import (
     IndexExpr, BinaryExpr, CallExpr, FuncExpr
 )
 
-class ByteCodeEmiter:
+class ByteCodeEmitter:
     def __init__(self, func_expr):
         self._src_expr = func_expr
         self._cells = []
@@ -121,5 +121,5 @@ def emit(func_expr):
     '''
     return `None` if emit failed.
     '''
-    emiter = ByteCodeEmiter(func_expr)
+    emiter = ByteCodeEmitter(func_expr)
     return emiter.emit()
