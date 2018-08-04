@@ -5,7 +5,7 @@
 #
 # ----------
 
-from .core import ValueExpr, AttrExpr, Make
+from .core import Make, ConstExpr
 
 class ExprVisitor:
     def visit(self, expr):
@@ -46,7 +46,7 @@ class DefaultExprVisitor(ExprVisitor):
         if expr.func is getattr:
             if len(expr.args) == 2 and not expr.kwargs:
                 attr_expr = expr.args[1]
-                if isinstance(attr_expr, ValueExpr) and isinstance(attr_expr.value, str):
+                if isinstance(attr_expr, ConstExpr) and isinstance(attr_expr.value, str):
                     return Make.attr(expr.args[0], attr_expr.value)
         return expr
 

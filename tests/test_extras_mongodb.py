@@ -24,8 +24,10 @@ class FakeCollection:
         self.projection = None
         self.skip = None
         self.limit = None
+        self.call_counter = 0
 
     def find(self, filter=None, projection=None, skip=0, limit=0, sort=None):
+        self.call_counter += 1
         self.filter = filter
         self.projection = projection
         self.skip = skip
@@ -90,16 +92,27 @@ class TestWhereStyle(unittest.TestCase):
     def test_attr_style(self):
         fc = FakeCollection()
         mongo_query = QUERY_CLS(fc)
+
+        # will convert attr to index
         mongo_query.where(lambda x: x.status == 'D').to_list()
+        self.assertEqual(fc.call_counter, 1)
         self.assertDictEqual(fc.filter, {'status': 'D'})
 
-    def test_attr_style_ref_key(self):
-        # now we can reduce getattr(x, k) to x.k !
-        k = 'status'
-        fc = FakeCollection()
-        mongo_query = QUERY_CLS(fc)
-        mongo_query.where(lambda x: getattr(x, k) == 'D').to_list()
+        # will reduce getattr(x, k) to x.k
+        mongo_query.where(lambda x: getattr(x, 'status') == 'D').to_list()
+        self.assertEqual(fc.call_counter, 2)
         self.assertDictEqual(fc.filter, {'status': 'D'})
+
+        # will not reduce getattr(x, k, d) to x.k
+        mongo_query.where(lambda x: getattr(x, 'status', None) == 'D').to_list()
+        self.assertEqual(fc.call_counter, 3)
+        self.assertDictEqual(fc.filter, {})
+
+        # will not reduce getattr(x, k) when k is free var
+        k = 'status__'
+        mongo_query.where(lambda x: getattr(x, k) == 'D').to_list()
+        self.assertEqual(fc.call_counter, 4)
+        self.assertDictEqual(fc.filter, {})
 
 
 class TestMongoDbWhereFields(unittest.TestCase):
