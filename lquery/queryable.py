@@ -80,46 +80,38 @@ class ReduceInfo:
     def __init__(self, queryable: IQueryable):
         self.querable = queryable # need to set from stack top.
         self._details = []
-        self._mode = self.MODE_NORMAL
-        self._mode_reason = None
 
     def add_node(self, type_, expr):
         self._details.append(ReduceInfoNode(type_, expr))
 
-    def set_mode(self, mode, reason: str):
-        if mode not in (self.MODE_NORMAL, self.MODE_EMPTY):
-            raise ValueError
-        self._mode = mode
-        self._mode_reason = reason
-
     @property
     def mode(self):
-        return self._mode
+        return self.MODE_NORMAL
 
     @property
     def details(self):
         return self._details[:]
 
-    def print(self):
-        if self._mode == self.MODE_NORMAL:
-            if all(d.type == self.TYPE_MEMORY for d in self.details):
-                reduce_info_str = '    all exec in memory'
-            elif all(d.type == self.TYPE_SQL for d in self.details):
-                reduce_info_str = '    all exec in SQL'
-            else:
-                lines = []
-                for type_, expr in self.details:
-                    expr_str = None
-                    if isinstance(expr, CallExpr):
-                        expr_str = expr.to_str(is_method=True)
-                    else:
-                        expr_str = str(expr.value)
-                    lines.append(f'    [{self._PRINT_TABLE[type_]}] {expr_str}')
-                reduce_info_str = '\n'.join(lines)
-        elif self._mode == self.MODE_EMPTY:
-            reduce_info_str = f'    all query was skiped since always empty: {self._mode_reason}'
+    def get_desc_strs(self):
+        strs = []
+        if all(d.type == self.TYPE_MEMORY for d in self.details):
+            strs = ['all exec in memory']
+        elif all(d.type == self.TYPE_SQL for d in self.details):
+            strs = ['all exec in SQL']
         else:
-            raise NotImplementedError
+            strs = []
+            for type_, expr in self.details:
+                expr_str = None
+                if isinstance(expr, CallExpr):
+                    expr_str = expr.to_str(is_method=True)
+                else:
+                    expr_str = str(expr.value)
+                strs.append(f'[{self._PRINT_TABLE[type_]}] {expr_str}')
+        return strs
+
+    def print(self):
+        desc_strs = self.get_desc_strs()
+        reduce_info_str = '\n'.join('    ' + line for line in desc_strs)
         print(f'reduce info of:\n  {self.querable}\n=>\n{reduce_info_str}')
 
 
