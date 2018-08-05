@@ -83,7 +83,7 @@ class QueryOptionsCallWhereExprVisitor(QueryOptionsExprVisitor):
             rupdater = right.accept(self)
             return lupdater & rupdater
         else:
-            return self._get_updater_by_call_where_compare(left, right, op)
+            return self._get_updater_by_compare(left, right, op)
 
     _SWAPABLE_OP_MAP = {
         '==': '==',
@@ -109,7 +109,7 @@ class QueryOptionsCallWhereExprVisitor(QueryOptionsExprVisitor):
         'not in': '$nin',
     }
 
-    def _get_updater_by_call_where_compare(self, left, right, op):
+    def _get_updater_by_compare(self, left, right, op):
         left_is_prop_expr = isinstance(left, (IndexExpr, AttrExpr))
         right_is_prop_expr = isinstance(right, (IndexExpr, AttrExpr))
 
@@ -122,7 +122,7 @@ class QueryOptionsCallWhereExprVisitor(QueryOptionsExprVisitor):
             swaped_op = self._SWAPABLE_OP_MAP.get(op)
             if swaped_op is None:
                 raise NotSupportError
-            return self._get_updater_by_call_where_compare(right, left, swaped_op)
+            return self._get_updater_by_compare(right, left, swaped_op)
 
         try:
             value = right.resolve_value()
@@ -165,9 +165,20 @@ class QueryOptionsCallWhereExprVisitor(QueryOptionsExprVisitor):
         # re.search('?', doc.name)
         func = expr.func.resolve_value()
         print(func is re.search)
-        if func is re.search and len(expr.args) == 2:
+        if func is re.search:
+            return self._get_updater_by_re_search(expr)
+        if func is hasattr:
+            return self._get_updater_by_hasattr(expr)
+        raise NotSupportError
+
+    def _get_updater_by_re_search(self, expr: CallExpr):
+        if len(expr.args) == 2:
             pattern = expr.args[0].resolve_value()
             field_name = self._get_parameter_indexes(expr.args[1])
-            updater = QueryOptionsUpdater.add_filter_field(field_name, {'$regex': pattern})
-            return updater
+            return QueryOptionsUpdater.add_filter_field(field_name, {'$regex': pattern})
         raise NotSupportError
+
+    def _get_updater_by_hasattr(self, expr: CallExpr):
+        field_name = self._get_parameter_indexes(expr.args[0])
+        field_name = f'{field_name}.{expr.args[1].resolve_value()}'
+        return QueryOptionsUpdater.add_filter_field(field_name, {'$exists': True})
