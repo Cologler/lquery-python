@@ -5,7 +5,6 @@
 # a empty queryable
 # ----------
 
-from .func import NOT_QUERYABLE_FUNCS
 from .queryable import Queryable, ReduceInfo, get_exprs, get_prev_queryable
 from .iterable import IterableQueryProvider
 
@@ -46,7 +45,7 @@ class EmptyQuery(Queryable):
 
 class EmptyQueryProvider(IterableQueryProvider):
     def execute(self, expr):
-        if expr.func in NOT_QUERYABLE_FUNCS:
+        if not expr.func.return_queryable:
             return super().execute(expr)
         return EmptyQuery(expr, get_prev_queryable(expr).reason)
 

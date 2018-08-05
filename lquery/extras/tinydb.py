@@ -5,7 +5,7 @@
 # lquery for tinydb
 # ----------
 
-from ..func import NOT_QUERYABLE_FUNCS, where
+from ..func import where
 from ..queryable import Queryable, QueryProvider
 from ..expr import Make
 from ..expr.builder import to_func_expr
@@ -24,7 +24,7 @@ class TinyDbQuery(Queryable):
 
 class TinyDbQueryProvider(QueryProvider):
     def execute(self, expr):
-        if expr.func in NOT_QUERYABLE_FUNCS:
+        if not expr.func.return_queryable:
             return super().execute(expr)
         expr = self._get_rewrited_call_expr(expr) or expr
         return super().execute(expr)

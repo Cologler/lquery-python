@@ -11,7 +11,6 @@ from collections import Iterable
 from typeguard import typechecked
 
 from .expr import CallExpr, ValueExpr, Make
-from .func import NOT_QUERYABLE_FUNCS
 from .queryable import Queryable, QueryProvider, IQueryable, ReduceInfo, QueryableSource
 
 def get_result(expr):
@@ -58,7 +57,7 @@ class IterableQueryProvider(QueryProvider):
 
     def execute(self, expr: Union[ValueExpr, CallExpr]):
         if isinstance(expr, CallExpr):
-            if expr.func in NOT_QUERYABLE_FUNCS:
+            if not expr.func.return_queryable:
                 return get_result(expr)
         return IterableQuery3(expr)
 

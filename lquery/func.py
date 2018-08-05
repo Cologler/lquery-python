@@ -194,3 +194,8 @@ def sequence_equal(src, other, *args):
 # `count` in list of NOT_QUERYABLE_FUNCS: 155 ns
 # `count` in set  of NOT_QUERYABLE_FUNCS: 53.8 ns
 NOT_QUERYABLE_FUNCS = frozenset(NOT_QUERYABLE_FUNCS)
+
+for name in list(locals()):
+    func = locals()[name]
+    if name not in ('query', 'not_queryable') and callable(func):
+        func.return_queryable = func not in NOT_QUERYABLE_FUNCS
