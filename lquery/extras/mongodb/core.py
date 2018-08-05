@@ -11,7 +11,7 @@ from ...func import where, skip, take
 from ...queryable import Queryable, ReduceInfo
 from ...iterable import IterableQueryProvider
 from ...expr import (
-    Make,
+    Make, RequireArgumentError,
     BinaryExpr, IndexExpr, ValueExpr, CallExpr, Expr, AttrExpr,
     ParameterExpr,
     BuildDictExpr, BuildListExpr
@@ -169,17 +169,9 @@ class MongoDbQueryQueryOptionsModifier:
                 raise NotSupportError
             return self._get_updater_by_call_where_compare(right, left, swaped_op)
 
-        if isinstance(right, ValueExpr):
-            value = right.value
-        elif isinstance(right, BuildDictExpr):
-            value = right.create()
-        elif isinstance(right, BuildListExpr):
-            value = right.create()
-        elif isinstance(right, CallExpr):
-            if require_argument(right):
-                raise NotSupportError
-            value = right()
-        else:
+        try:
+            value = right.resolve_value()
+        except RequireArgumentError:
             raise NotSupportError
 
         if isinstance(value, tuple):

@@ -9,18 +9,41 @@ from typing import List, Dict, Callable, Tuple
 
 from typeguard import typechecked
 
+# errors
+
+class RequireArgumentError(Exception):
+    '''
+    a error for describe `resolve_value()` failed.
+    '''
+    pass
+
+
 # interfaces
 
 class IExpr:
     __slots__ = ()
 
     def accept(self, visitor):
-        return visitor.visit(self)
+        '''
+        accept a visitor for create a new expr.
+        '''
+        raise NotImplementedError
+
+    def resolve_value(self):
+        '''
+        try resolve value from static expr tree.
+
+        if expr tree require parameters, raise `RequireArgumentError`.
+        '''
+        raise NotImplementedError
 
 # base classes
 
 class Expr(IExpr):
     __slots__ = ()
+
+    def accept(self, visitor):
+        return visitor.visit(self)
 
 
 class ValueExpr(Expr):
@@ -41,6 +64,9 @@ class ValueExpr(Expr):
 
     def __repr__(self):
         return f'{type(self).__name__}({repr(self.value)})'
+
+    def resolve_value(self):
+        return self._value
 
 # classes
 
@@ -68,6 +94,9 @@ class ParameterExpr(Expr):
     def __repr__(self):
         return f'ParameterExpr({repr(self._name)})'
 
+    def resolve_value(self):
+        raise RequireArgumentError
+
 
 class ConstExpr(ValueExpr):
     '''
@@ -94,6 +123,9 @@ class DerefExpr(ValueExpr):
 
     @property
     def value(self):
+        return self._value.cell_contents
+
+    def resolve_value(self):
         return self._value.cell_contents
 
 
@@ -124,6 +156,9 @@ class AttrExpr(Expr):
 
     def accept(self, visitor):
         return visitor.visit_attr_expr(self)
+
+    def resolve_value(self):
+        return getattr(self._expr.resolve_value(), self._name)
 
 
 class IndexExpr(Expr):
@@ -157,6 +192,9 @@ class IndexExpr(Expr):
 
     def accept(self, visitor):
         return visitor.visit_index_expr(self)
+
+    def resolve_value(self):
+        return self._expr.resolve_value()[self._key.resolve_value()]
 
 
 class UnaryExpr(Expr):
@@ -269,6 +307,11 @@ class CallExpr(Expr):
     def accept(self, visitor):
         return visitor.visit_call_expr(self)
 
+    def resolve_value(self):
+        args = [v.resolve_value() for v in self._args]
+        kwargs = dict((k, v.resolve_value()) for k, v in self._kwargs.items())
+        return self._func(*args, **kwargs)
+
 
 class FuncExpr(Expr):
     __slots__ = ('_body', '_args')
@@ -315,11 +358,8 @@ class BuildListExpr(Expr):
         items_str = ', '.join(f'{repr(v)}' for v in self._items)
         return f'BuildListExpr({items_str})'
 
-    def create(self):
-        '''
-        build the dict
-        '''
-        return list([x.value for x in self._items])
+    def resolve_value(self):
+        return [x.resolve_value() for x in self._items]
 
 
 class BuildDictExpr(Expr):
@@ -336,15 +376,11 @@ class BuildDictExpr(Expr):
         kvps_str = ', '.join(f'{repr(k.value)}: {repr(v.value)}' for k, v in self._kvps)
         return f'{{{kvps_str}}}'
 
-    def create(self):
-        '''
-        build the dict
-        '''
+    def resolve_value(self):
         d = {}
         for k, v in self._kvps:
-            d[k.value] = v.value
+            d[k.resolve_value()] = v.resolve_value()
         return d
-
 
 class Make:
     @staticmethod
