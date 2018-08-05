@@ -266,7 +266,7 @@ class BinaryExpr(Expr):
 class CallExpr(Expr):
     __slots__ = ('_func', '_args', '_kwargs')
 
-    def __init__(self, func: Callable, *args: List[IExpr], **kwargs: Dict[str, IExpr]):
+    def __init__(self, func: IExpr, *args: List[IExpr], **kwargs: Dict[str, IExpr]):
         # all item of args and value of kwargs are union(ValueExpr, ParameterExpr)
         super().__init__()
         self._func = func
@@ -289,7 +289,10 @@ class CallExpr(Expr):
         return self.to_str()
 
     def to_str(self, *, is_method=False) -> str:
-        fn = self._func.__name__
+        try:
+            fn = self._func.resolve_value().__name__
+        except RequireArgumentError:
+            fn = str(self._func)
         args = self._args[1:] if is_method else self._args
         ls = [str(x) for x in args]
         ls += [f'{k}={repr(v)}' for k, v in self._kwargs.items()]
@@ -297,9 +300,7 @@ class CallExpr(Expr):
         return f'{fn}({args_str})'
 
     def __call__(self):
-        args = [v.value for v in self._args]
-        kwargs = dict((k, self._kwargs[k].value) for k in self._kwargs)
-        return self._func(*args, **kwargs)
+        return self.resolve_value()
 
     def __repr__(self):
         return f'CallExpr({self})'
@@ -310,7 +311,7 @@ class CallExpr(Expr):
     def resolve_value(self):
         args = [v.resolve_value() for v in self._args]
         kwargs = dict((k, v.resolve_value()) for k, v in self._kwargs.items())
-        return self._func(*args, **kwargs)
+        return self._func.resolve_value()(*args, **kwargs)
 
 
 class FuncExpr(Expr):
@@ -396,7 +397,7 @@ class Make:
         return DerefExpr(cell)
 
     @staticmethod
-    def call(func: Callable, *args: List[IExpr], **kwargs: Dict[str, IExpr]):
+    def call(func: IExpr, *args: List[IExpr], **kwargs: Dict[str, IExpr]):
         '''
         create a expr for represents call a function.
         '''

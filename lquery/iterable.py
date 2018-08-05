@@ -16,7 +16,7 @@ from .queryable import Queryable, IQueryProvider, IQueryable, ReduceInfo
 def get_result(expr):
     if type(expr) is CallExpr:
         args = [get_result(e) for e in expr.args]
-        func = expr.func
+        func = expr.func.resolve_value()
         assert expr.args and not expr.kwargs
         return func(*args)
     else:
@@ -49,7 +49,7 @@ class IterableQuery(NextIterableQuery):
 class IterableQueryProvider(IQueryProvider):
     def execute(self, expr: Union[ValueExpr, CallExpr]):
         if isinstance(expr, CallExpr):
-            if not expr.func.return_queryable:
+            if not expr.func.resolve_value().return_queryable:
                 return get_result(expr)
         return NextIterableQuery(expr)
 

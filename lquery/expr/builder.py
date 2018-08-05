@@ -134,8 +134,7 @@ class FuncExprBuilder:
 
     def call_function(self, instr: dis.Instruction):
         args = self._stack_pop(instr.arg)
-        func_ref = self._stack.pop()
-        func = func_ref.value
+        func = self._stack.pop()
         expr = Make.call(func, *args)
         self._stack.append(expr)
 
@@ -143,8 +142,7 @@ class FuncExprBuilder:
         keys = self._stack.pop().value
         kvps = list(zip(keys, self._stack_pop(len(keys))))
         kwargs = dict(kvps)
-        func_ref = self._stack.pop()
-        func = func_ref.value
+        func = self._stack.pop()
         expr = Make.call(func, **kwargs)
         self._stack.append(expr)
 

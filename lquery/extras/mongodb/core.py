@@ -80,7 +80,7 @@ class MongoDbQueryQueryOptionsModifier:
         return self._always_empty
 
     def apply_call(self, expr: CallExpr) -> bool:
-        func = expr.func
+        func = expr.func.resolve_value()
         try:
             if func is where:
                 self._apply_call_where(expr.args[1].value)
@@ -212,7 +212,7 @@ class MongoDbQueryQueryOptionsModifier:
 
 class MongoDbQueryProvider(IterableQueryProvider):
     def execute(self, expr):
-        if expr.func in (where, skip, take):
+        if expr.func.resolve_value() in (where, skip, take):
             queryable = expr.args[0].value
             query_options = queryable.query_options
             query_options = copy.deepcopy(query_options)

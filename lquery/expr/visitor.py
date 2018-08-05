@@ -43,7 +43,7 @@ class DefaultExprVisitor(ExprVisitor):
         return Make.attr(src_expr, expr.name)
 
     def visit_call_expr(self, expr):
-        if expr.func is getattr:
+        if expr.func.resolve_value() is getattr:
             if len(expr.args) == 2 and not expr.kwargs:
                 attr_expr = expr.args[1]
                 if isinstance(attr_expr, ConstExpr) and isinstance(attr_expr.value, str):

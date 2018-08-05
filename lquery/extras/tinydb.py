@@ -25,13 +25,13 @@ class TinyDbQuery(Queryable):
 
 class TinyDbQueryProvider(IterableQueryProvider):
     def execute(self, expr):
-        if not expr.func.return_queryable:
+        if not expr.func.resolve_value().return_queryable:
             return super().execute(expr)
         expr = self._get_rewrited_call_expr(expr) or expr
         return super().execute(expr)
 
     def _get_rewrited_call_expr(self, call_expr):
-        if call_expr.func is where:
+        if call_expr.func.resolve_value() is where:
             func_expr = to_func_expr(call_expr.args[1].value)
             if func_expr is None:
                 return
@@ -42,7 +42,7 @@ class TinyDbQueryProvider(IterableQueryProvider):
             compiled_func = emit(expr)
             if compiled_func is None:
                 return
-            return Make.call(where, call_expr.args[0], Make.ref(compiled_func))
+            return Make.call(Make.ref(where), call_expr.args[0], Make.ref(compiled_func))
 
 
 class TinyDbExprVisitor(DbExprVisitor):

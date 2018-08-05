@@ -125,7 +125,7 @@ class IQueryProvider:
         '''
         return a `IQueryable` or a value by `expr`.
 
-        for example, if the `expr.func` is `count`, return value should be a number.
+        for example, if the `expr.func.resolve_value()` is `count`, return value should be a number.
         '''
         raise NotImplementedError
 
@@ -161,7 +161,8 @@ class Queryable(IQueryable):
         return self._provider.execute(self, call_expr)
 
     def _then(self, func, *args):
-        next_expr = Make.call(func, Make.ref(self), *[Make.ref(a) for a in args])
+        allargs = [func, self, *args]
+        next_expr = Make.call(*[Make.ref(a) for a in allargs])
         return self._provider.execute(next_expr)
 
     def get_reduce_info(self):
