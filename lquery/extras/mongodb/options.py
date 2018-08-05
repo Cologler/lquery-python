@@ -22,8 +22,12 @@ class QueryOptions:
 
 
 class QueryOptionsUpdater:
+
     def apply(self, options: QueryOptions):
         raise NotImplementedError
+
+    def op_not(self):
+        raise NotSupportError
 
     @staticmethod
     def add_skip(value):
@@ -37,6 +41,11 @@ class QueryOptionsUpdater:
     def add_filter_field(field_name, value):
         updater = QueryOptionsFilterFieldUpdater()
         updater.add_pairs(field_name, value)
+        return updater
+
+    @staticmethod
+    def filter_field_exists(field_name):
+        updater = QueryOptionsFilterFieldExistsUpdater(field_name)
         return updater
 
 
@@ -118,3 +127,19 @@ class QueryOptionsFilterFieldUpdater(QueryOptionsUpdater):
         for name, value in other.data.items():
             new_updater.add_pairs(name, value)
         return new_updater
+
+
+class QueryOptionsFilterFieldExistsUpdater(QueryOptionsUpdater):
+    def __init__(self, field_name, value: bool=True):
+        self._field_name = field_name
+        self._value = value
+
+    def op_not(self):
+        return QueryOptionsFilterFieldExistsUpdater(self._field_name, not self._value)
+
+    def apply(self, options: QueryOptions):
+        data = options.filter.get(self._field_name, None)
+        if data is None:
+            options.filter[self._field_name] = {'$exists': self._value}
+        else:
+            raise NotSupportError

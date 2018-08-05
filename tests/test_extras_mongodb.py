@@ -383,6 +383,11 @@ def test_field_exists():
     query = query.where(lambda x: hasattr(x.name, 'first'))
     assert query.query_options.filter == {'name.first': {'$exists': True}}
 
+def test_field_not_exists():
+    query = QUERY_CLS(None)
+    query = query.where(lambda x: not hasattr(x.name, 'first'))
+    assert query.query_options.filter == {'name.first': {'$exists': False}}
+
 
 def main(argv=None):
     if argv is None:

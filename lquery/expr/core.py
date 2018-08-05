@@ -220,6 +220,9 @@ class UnaryExpr(Expr):
     def __repr__(self):
         return f'UnaryExpr({repr(self._op)}, {repr(self._expr)})'
 
+    def accept(self, visitor):
+        return visitor.visit_unary_expr(self)
+
 
 class BinaryExpr(Expr):
     __slots__ = ('_left', '_right', '_op')

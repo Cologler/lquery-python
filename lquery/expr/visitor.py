@@ -20,10 +20,13 @@ class ExprVisitor:
     def visit_call_expr(self, expr):
         return self.visit(expr)
 
-    def visit_binary_expr(self, expr):
+    def visit_func_expr(self, expr):
         return self.visit(expr)
 
-    def visit_func_expr(self, expr):
+    def visit_unary_expr(self, expr):
+        return self.visit(expr)
+
+    def visit_binary_expr(self, expr):
         return self.visit(expr)
 
 

@@ -10,7 +10,7 @@ import re
 from ...func import where, skip, take
 from ...expr import (
     RequireArgumentError,
-    BinaryExpr, IndexExpr, CallExpr, AttrExpr,
+    BinaryExpr, IndexExpr, CallExpr, AttrExpr, UnaryExpr,
     ParameterExpr
 )
 from ...expr.builder import to_func_expr
@@ -76,6 +76,12 @@ class QueryOptionsRootExprVisitor(QueryOptionsExprVisitor):
 
 
 class QueryOptionsCallWhereExprVisitor(QueryOptionsExprVisitor):
+    def visit_unary_expr(self, expr: UnaryExpr):
+        if expr.op == 'not':
+            updater = expr.expr.accept(self)
+            return updater.op_not()
+        raise NotSupportError
+
     def visit_binary_expr(self, body: BinaryExpr):
         left, op, right = body.left.accept(VISITOR), body.op, body.right.accept(VISITOR)
         if op in ('&', 'and'):
@@ -181,4 +187,4 @@ class QueryOptionsCallWhereExprVisitor(QueryOptionsExprVisitor):
     def _get_updater_by_hasattr(self, expr: CallExpr):
         field_name = self._get_parameter_indexes(expr.args[0])
         field_name = f'{field_name}.{expr.args[1].resolve_value()}'
-        return QueryOptionsUpdater.add_filter_field(field_name, {'$exists': True})
+        return QueryOptionsUpdater.filter_field_exists(field_name)
