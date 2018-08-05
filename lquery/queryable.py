@@ -405,12 +405,6 @@ class QueryableSource(Queryable):
         reduce_info.add_node(ReduceInfo.TYPE_SRC, self.expr)
 
 
-class QueryProvider(IQueryProvider):
-    def execute(self, expr: Union[ValueExpr, CallExpr]):
-        from .iterable import PROVIDER as ITERABLE_PROVIDER
-        return ITERABLE_PROVIDER.execute(expr)
-
-
 def get_queryables(expr):
     '''
     get queryables chain as a `tuple`.

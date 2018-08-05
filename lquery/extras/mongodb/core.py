@@ -8,7 +8,8 @@
 import copy
 
 from ...func import where, skip, take
-from ...queryable import Queryable, QueryProvider, ReduceInfo
+from ...queryable import Queryable, ReduceInfo
+from ...iterable import IterableQueryProvider
 from ...expr import (
     Make,
     BinaryExpr, IndexExpr, ValueExpr, CallExpr, Expr, AttrExpr,
@@ -21,10 +22,7 @@ from ...expr.utils import (
     require_argument,
 )
 from ...expr.visitor import DefaultExprVisitor
-from ...empty import PROVIDER as EMPTY_PROVIDER
 from ...empty import EmptyQuery
-from ...iterable import PROVIDER as ITERABLE_PROVIDER
-from ...iterable import IterableQuery
 
 from .._common import NotSupportError, AlwaysEmptyError
 
@@ -212,7 +210,7 @@ class MongoDbQueryQueryOptionsModifier:
         }
 
 
-class MongoDbQueryProvider(QueryProvider):
+class MongoDbQueryProvider(IterableQueryProvider):
     def execute(self, expr):
         if expr.func in (where, skip, take):
             queryable = expr.args[0].value

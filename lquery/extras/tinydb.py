@@ -6,7 +6,8 @@
 # ----------
 
 from ..func import where
-from ..queryable import Queryable, QueryProvider
+from ..queryable import Queryable
+from ..iterable import IterableQueryProvider
 from ..expr import Make
 from ..expr.builder import to_func_expr
 from ..expr.emitter import emit
@@ -22,7 +23,7 @@ class TinyDbQuery(Queryable):
         yield from self.expr.value
 
 
-class TinyDbQueryProvider(QueryProvider):
+class TinyDbQueryProvider(IterableQueryProvider):
     def execute(self, expr):
         if not expr.func.return_queryable:
             return super().execute(expr)

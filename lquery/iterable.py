@@ -11,7 +11,7 @@ from collections import Iterable
 from typeguard import typechecked
 
 from .expr import CallExpr, ValueExpr, Make
-from .queryable import Queryable, QueryProvider, IQueryable, ReduceInfo, QueryableSource
+from .queryable import Queryable, IQueryProvider, IQueryable, ReduceInfo, QueryableSource
 
 def get_result(expr):
     if type(expr) is CallExpr:
@@ -46,15 +46,7 @@ class IterableQuery(QueryableSource):
         return iter(get_result(self.expr))
 
 
-class IterableQueryProvider(QueryProvider):
-
-    def create_query(self, src, query=None):
-        queryable = IterableQuery(src)
-        if query:
-            for expr in query.exprs:
-                queryable = self.execute(queryable, expr)
-        return queryable
-
+class IterableQueryProvider(IQueryProvider):
     def execute(self, expr: Union[ValueExpr, CallExpr]):
         if isinstance(expr, CallExpr):
             if not expr.func.return_queryable:
