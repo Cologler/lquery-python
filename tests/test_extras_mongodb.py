@@ -399,17 +399,15 @@ def test_field_exists():
     query = source.where(lambda x: hasattr(x.name, 'first'))
     assert query.query_options.filter == {'name.first': {'$exists': True}}
 
+    query = source.where(lambda x: hasattr(x.name, 'first') == True)
+    assert query.query_options.filter == {'name.first': {'$exists': True}}
+
+    query = source.where(lambda x: hasattr(x.name, 'first') == False)
+    assert query.query_options.filter == {'name.first': {'$exists': False}}
+
     query = source.where(lambda x: not hasattr(x.name, 'first'))
     assert query.query_options.filter == {'name.first': {'$exists': False}}
 
+    query = source.where(lambda x: not hasattr(x.name, 'first') == True)
+    assert query.query_options.filter == {'name.first': {'$exists': False}}
 
-def main(argv=None):
-    if argv is None:
-        argv = sys.argv
-    try:
-        unittest.main()
-    except Exception:
-        traceback.print_exc()
-
-if __name__ == '__main__':
-    main()

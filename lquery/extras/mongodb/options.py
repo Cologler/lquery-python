@@ -204,3 +204,13 @@ class QueryOptionsFilterFieldExistsUpdater(QueryOptionsUpdater):
         if op == 'not':
             return QueryOptionsFilterFieldExistsUpdater(self._field_name, not self._value)
         return super().op_unary(op)
+
+    def op_binary(self, op: str, other):
+        if op == '==':
+            if other is True:
+                return self
+            elif other is False:
+                return self.op_unary('not')
+        return super().op_binary(op, other)
+
+
