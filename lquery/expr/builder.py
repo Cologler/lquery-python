@@ -121,22 +121,16 @@ class FuncExprBuilder:
         expr = Make.index(src, key)
         self._stack.append(expr)
 
-    def binary_add(self, _: dis.Instruction):
-        right = self._stack.pop()
-        left = self._stack.pop()
-        expr = Make.binary_op(left, right, '+')
-        self._stack.append(expr)
-
     def binary_and(self, _: dis.Instruction):
         right = self._stack.pop()
         left = self._stack.pop()
-        expr = Make.binary_op(left, right, '&')
+        expr = Make.binary_op(left, '&', right)
         self._stack.append(expr)
 
     def compare_op(self, instr: dis.Instruction):
         right = self._stack.pop()
         left = self._stack.pop()
-        expr = Make.binary_op(left, right, instr.argval)
+        expr = Make.binary_op(left, instr.argval, right)
         self._stack.append(expr)
 
     def return_value(self, instr: dis.Instruction):
@@ -190,11 +184,18 @@ class FuncExprBuilder:
         # opcode=4
         self._stack.append(self._stack[-1])
 
+    def binary_add(self, _: dis.Instruction):
+        # opcode=23
+        right = self._stack.pop()
+        left = self._stack.pop()
+        expr = Make.binary_op(left, '+', right)
+        self._stack.append(expr)
+
     def binary_subtract(self, _: dis.Instruction):
         # opcode=24
         right = self._stack.pop()
         left = self._stack.pop()
-        expr = Make.binary_op(left, right, '-')
+        expr = Make.binary_op(left, '-', right)
         self._stack.append(expr)
 
     def jump_if_false_or_pop(self, instr: dis.Instruction):
@@ -205,7 +206,7 @@ class FuncExprBuilder:
         left = self._stack.pop()
         def callback():
             right = self._stack.pop()
-            expr = Make.binary_op(left, right, 'and')
+            expr = Make.binary_op(left, 'and', right)
             self._stack.append(expr)
         self._hook(instr.argval, callback)
 
@@ -217,7 +218,7 @@ class FuncExprBuilder:
         left = self._stack.pop()
         def callback():
             right = self._stack.pop()
-            expr = Make.binary_op(left, right, 'or')
+            expr = Make.binary_op(left, 'or', right)
             self._stack.append(expr)
         self._hook(instr.argval, callback)
 

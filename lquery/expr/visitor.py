@@ -55,7 +55,7 @@ class DefaultExprVisitor(ExprVisitor):
         right = expr.right.accept(self)
         if left is expr.left and right is expr.right:
             return expr
-        return Make.binary_op(left, right, expr.op)
+        return Make.binary_op(left, expr.op, right)
 
     def visit_func_expr(self, expr):
         body = expr.body.accept(self)

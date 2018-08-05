@@ -10,11 +10,7 @@ from bytecode import (
     Instr, Compare, FreeVar
 )
 
-from .core import (
-    Make,
-    ParameterExpr, ConstExpr, ReferenceExpr, AttrExpr,
-    IndexExpr, BinaryExpr, CallExpr, FuncExpr
-)
+from .core import ConstExpr
 
 class ByteCodeEmitter:
     def __init__(self, func_expr):

@@ -173,7 +173,7 @@ class BinaryExpr(Expr):
     }
 
     @typechecked
-    def __init__(self, left: IExpr, right: IExpr, op: str):
+    def __init__(self, left: IExpr, op: str, right: IExpr):
         self._left = left
         self._right = right
         self._op = op
@@ -350,11 +350,11 @@ class Make:
         return ParameterExpr(name)
 
     @staticmethod
-    def binary_op(left: IExpr, right: IExpr, op: str):
+    def binary_op(left: IExpr, op: str, right: IExpr):
         '''
         create a expr for represents a binary operation.
         '''
-        return BinaryExpr(left, right, op)
+        return BinaryExpr(left, op, right)
 
     @staticmethod
     def attr(expr: IExpr, name: str):
