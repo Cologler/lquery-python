@@ -26,7 +26,10 @@ class QueryOptionsUpdater:
     def apply(self, options: QueryOptions):
         raise NotImplementedError
 
-    def op_not(self):
+    def op_unary(self, op: str):
+        raise NotSupportError
+
+    def op_binary(self, op: str, other):
         raise NotSupportError
 
     @staticmethod
@@ -76,6 +79,18 @@ class QueryOptionsLimitUpdater(QueryOptionsUpdater):
             options.limit = min(options.limit, self._value)
 
 
+_OP_MAP = {
+    '<': '$lt',
+    '>': '$gt',
+    '<=': '$lte',
+    '>=': '$gte',
+    'in': '$in',
+    '!=': '$ne',
+    '-not in': '$ne',
+    'not in': '$nin',
+}
+
+
 class QueryOptionsFilterFieldUpdater(QueryOptionsUpdater):
     def __init__(self, field_name, *, value: bool=True):
         self._field_name = field_name
@@ -88,8 +103,31 @@ class QueryOptionsFilterFieldUpdater(QueryOptionsUpdater):
         else:
             raise NotSupportError
 
-    def op_not(self):
-        return QueryOptionsFilterFieldUpdater(self._field_name, value=not self._value)
+    def op_unary(self, op):
+        if op == 'not':
+            return QueryOptionsFilterFieldUpdater(self._field_name, value=not self._value)
+        return super().op_unary(op)
+
+    def op_binary(self, op: str, other):
+        value = self._convert_value(op, other)
+        updater = QueryOptionsUpdater.add_filter_field(self._field_name, value)
+        return updater
+
+    def _convert_value(self, op: str, other):
+        '''
+        get mongodb query object value by `value` and `op`.
+
+        for example: `(3, '>')` => `{ '$gt': 3 }`
+        '''
+        if op == '==' or op == '-in':
+            # in mean item in list
+            return other
+
+        op = _OP_MAP.get(op)
+        if op is None:
+            raise NotSupportError
+
+        return { op: other }
 
 
 class QueryOptionsFilterFieldsListUpdater(QueryOptionsUpdater):
@@ -155,12 +193,14 @@ class QueryOptionsFilterFieldExistsUpdater(QueryOptionsUpdater):
         self._field_name = field_name
         self._value = value
 
-    def op_not(self):
-        return QueryOptionsFilterFieldExistsUpdater(self._field_name, not self._value)
-
     def apply(self, options: QueryOptions):
         data = options.filter.get(self._field_name, None)
         if data is None:
             options.filter[self._field_name] = {'$exists': self._value}
         else:
             raise NotSupportError
+
+    def op_unary(self, op):
+        if op == 'not':
+            return QueryOptionsFilterFieldExistsUpdater(self._field_name, not self._value)
+        return super().op_unary(op)

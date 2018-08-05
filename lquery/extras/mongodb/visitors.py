@@ -15,7 +15,7 @@ from ...expr import (
 )
 from ...expr.builder import to_func_expr
 from ...expr.visitor import DefaultExprVisitor, ExprVisitor
-from ...expr.utils import get_deep_names
+from ...expr.utils import get_deep_names, require_argument
 
 from .._common import NotSupportError, AlwaysEmptyError
 
@@ -76,15 +76,17 @@ class QueryOptionsRootExprVisitor(QueryOptionsExprVisitor):
 
 
 class QueryOptionsCallWhereExprVisitor(QueryOptionsExprVisitor):
+    def visit_index_expr(self, expr: IndexExpr):
+        indexes = self._get_parameter_indexes(expr)
+        return QueryOptionsUpdater.filter_field(indexes)
+
     def visit_attr_expr(self, expr: AttrExpr):
         indexes = self._get_parameter_indexes(expr)
         return QueryOptionsUpdater.filter_field(indexes)
 
     def visit_unary_expr(self, expr: UnaryExpr):
-        if expr.op == 'not':
-            updater = expr.expr.accept(self)
-            return updater.op_not()
-        raise NotSupportError
+        updater = expr.expr.accept(self)
+        return updater.op_unary(expr.op)
 
     def visit_binary_expr(self, body: BinaryExpr):
         left, op, right = body.left.accept(VISITOR), body.op, body.right.accept(VISITOR)
@@ -108,36 +110,28 @@ class QueryOptionsCallWhereExprVisitor(QueryOptionsExprVisitor):
         'not in': '-not in',
     }
 
-    _OP_MAP = {
-        '<': '$lt',
-        '>': '$gt',
-        '<=': '$lte',
-        '>=': '$gte',
-        'in': '$in',
-        '!=': '$ne',
-        '-not in': '$ne',
-        'not in': '$nin',
-    }
+    def _resolve_value(self, expr):
+        try:
+            value = expr.resolve_value()
+            return True, value
+        except RequireArgumentError:
+            return False, None
 
     def _get_updater_by_compare(self, left, right, op):
-        left_is_prop_expr = isinstance(left, (IndexExpr, AttrExpr))
-        right_is_prop_expr = isinstance(right, (IndexExpr, AttrExpr))
-
-        if not left_is_prop_expr and not right_is_prop_expr:
+        lh, lv = self._resolve_value(left)
+        rh, rv = self._resolve_value(right)
+        if lh == rh:
+            # both has arguments or not
             raise NotSupportError
-        if left_is_prop_expr and right_is_prop_expr:
-            raise NotSupportError
-
-        if not left_is_prop_expr:
-            swaped_op = self._SWAPABLE_OP_MAP.get(op)
-            if swaped_op is None:
+        if lh:
+            op = self._SWAPABLE_OP_MAP.get(op)
+            if op is None:
                 raise NotSupportError
-            return self._get_updater_by_compare(right, left, swaped_op)
-
-        try:
-            value = right.resolve_value()
-        except RequireArgumentError:
-            raise NotSupportError
+            expr = right
+            value = lv
+        else:
+            expr = left
+            value = rv
 
         if isinstance(value, tuple):
             # python will auto convert `lambda x: x in ['A', 'B']` to `lambda x: x in ('A', 'B')`
@@ -145,31 +139,8 @@ class QueryOptionsCallWhereExprVisitor(QueryOptionsExprVisitor):
         if not isinstance(value, (str, int, dict, list)):
             raise NotSupportError
 
-        value = self._from_op(value, op)
-        if value is None:
-            raise NotSupportError
-
-        field_name = self._get_parameter_indexes(left)
-        updater = QueryOptionsUpdater.add_filter_field(field_name, value)
-        return updater
-
-    def _from_op(self, right_value, op):
-        '''
-        get mongodb query object value by `value` and `op`.
-
-        for example: `(3, '>')` => `{ '$gt': 3 }`
-        '''
-        if op == '==' or op == '-in':
-            # in mean item in list
-            return right_value
-
-        op = self._OP_MAP.get(op)
-        if op is None:
-            raise NotSupportError
-
-        return {
-            op: right_value
-        }
+        updater = expr.accept(self)
+        return updater.op_binary(op, value)
 
     def visit_call_expr(self, expr: CallExpr):
         # re.search('?', doc.name)
