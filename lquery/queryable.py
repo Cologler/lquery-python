@@ -400,11 +400,6 @@ class Queryable(IQueryable):
         return Q(self).to_dictionary(key_selector, value_selector)
 
 
-class QueryableSource(Queryable):
-    def update_reduce_info(self, reduce_info: ReduceInfo):
-        reduce_info.add_node(ReduceInfo.TYPE_SRC, self.expr)
-
-
 def get_queryables(expr):
     '''
     get queryables chain as a `tuple`.

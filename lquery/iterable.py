@@ -11,7 +11,7 @@ from collections import Iterable
 from typeguard import typechecked
 
 from .expr import CallExpr, ValueExpr, Make
-from .queryable import Queryable, IQueryProvider, IQueryable, ReduceInfo, QueryableSource
+from .queryable import Queryable, IQueryProvider, IQueryable, ReduceInfo
 
 def get_result(expr):
     if type(expr) is CallExpr:
@@ -23,7 +23,7 @@ def get_result(expr):
         return expr.value
 
 
-class IterableQuery3(Queryable):
+class NextIterableQuery(Queryable):
     def __init__(self, expr):
         super().__init__(expr, PROVIDER)
 
@@ -34,16 +34,16 @@ class IterableQuery3(Queryable):
         reduce_info.add_node(ReduceInfo.TYPE_MEMORY, self.expr)
 
 
-class IterableQuery(QueryableSource):
+class IterableQuery(NextIterableQuery):
     @typechecked
     def __init__(self, items: Iterable):
-        super().__init__(Make.ref(items), PROVIDER)
+        super().__init__(Make.ref(items))
 
     def __str__(self):
         return f'Queryable({self.expr.value})'
 
-    def __iter__(self):
-        return iter(get_result(self.expr))
+    def update_reduce_info(self, reduce_info):
+        reduce_info.add_node(ReduceInfo.TYPE_SRC, self.expr)
 
 
 class IterableQueryProvider(IQueryProvider):
@@ -51,6 +51,6 @@ class IterableQueryProvider(IQueryProvider):
         if isinstance(expr, CallExpr):
             if not expr.func.return_queryable:
                 return get_result(expr)
-        return IterableQuery3(expr)
+        return NextIterableQuery(expr)
 
 PROVIDER = IterableQueryProvider()
