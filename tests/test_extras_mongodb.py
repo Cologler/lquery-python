@@ -129,6 +129,18 @@ class TestMongoDbWhereFields(unittest.TestCase):
         mongo_query.where(lambda x: 'D' == x['status']).to_list()
         self.assertDictEqual(fc.filter, {'status': 'D'})
 
+    def test_query_select_documents_by_ne(self):
+        fc = FakeCollection()
+        mongo_query = QUERY_CLS(fc)
+        mongo_query.where(lambda x: x['status'] != 'D').to_list()
+        self.assertDictEqual(fc.filter, {'status': {'$ne': 'D'}})
+
+    def test_query_select_documents_by_ne_reversed(self):
+        fc = FakeCollection()
+        mongo_query = QUERY_CLS(fc)
+        mongo_query.where(lambda x: 'D' != x['status']).to_list()
+        self.assertDictEqual(fc.filter, {'status': {'$ne': 'D'}})
+
     def test_query_select_documents_by_gt(self):
         fc = FakeCollection()
         mongo_query = QUERY_CLS(fc)
@@ -247,6 +259,23 @@ class TestMongoDbWhereFieldIn(unittest.TestCase):
         mongo_query = QUERY_CLS(fc)
         mongo_query.where(lambda x: 'D' in x['status']).to_list()
         self.assertDictEqual(fc.filter, {'status': 'D'})
+
+    def test_query_select_documents_by_not_in(self):
+        '''
+        '''
+        fc = FakeCollection()
+        mongo_query = QUERY_CLS(fc)
+        mongo_query.where(lambda x: x['status'] not in ['A', 'B']).to_list()
+        # x['status'] in ['A', 'B', 'C'] mean:
+        self.assertDictEqual(fc.filter, {'status': {'$nin': ['A', 'B']}})
+
+    def test_query_select_documents_by_not_in_reversed(self):
+        '''
+        '''
+        fc = FakeCollection()
+        mongo_query = QUERY_CLS(fc)
+        mongo_query.where(lambda x: 'D' not in x['status']).to_list()
+        self.assertDictEqual(fc.filter, {'status': {'$ne': 'D'}})
 
 
 class TestMongoDbQuery(unittest.TestCase):

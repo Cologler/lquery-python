@@ -41,9 +41,12 @@ class NextMongoDbQuery(Queryable):
     def __str__(self):
         return f'Queryable({self._collection})'
 
-    def __iter__(self):
+    def get_cursor(self):
         cursor = self._query_options.get_cursor(self._collection)
-        yield from cursor
+        return cursor
+
+    def __iter__(self):
+        yield from self.get_cursor()
 
     @property
     def collection(self):
@@ -129,6 +132,7 @@ class MongoDbQueryQueryOptionsModifier:
 
     _SWAPABLE_OP_MAP = {
         '==': '==',
+        '!=': '!=',
         '>': '<',
         '<': '>',
         '>=': '<=',
@@ -136,6 +140,18 @@ class MongoDbQueryQueryOptionsModifier:
 
         # magic
         'in': '-in',
+        'not in': '-not in',
+    }
+
+    _OP_MAP = {
+        '<': '$lt',
+        '>': '$gt',
+        '<=': '$lte',
+        '>=': '$gte',
+        'in': '$in',
+        '!=': '$ne',
+        '-not in': '$ne',
+        'not in': '$nin',
     }
 
     def _get_updater_by_call_where_compare(self, left, right, op):
@@ -182,14 +198,6 @@ class MongoDbQueryQueryOptionsModifier:
         fname = '.'.join(indexes)
         updater = QueryOptionsUpdater.add_filter_field(fname, value)
         return updater
-
-    _OP_MAP = {
-        '<': '$lt',
-        '>': '$gt',
-        '<=': '$lte',
-        '>=': '$gte',
-        'in': '$in',
-    }
 
     def _from_op(self, right_value, op):
         '''
