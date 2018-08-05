@@ -25,7 +25,7 @@ class IExpr:
 
     def accept(self, visitor):
         '''
-        accept a visitor for create a new expr.
+        accept a visitor as selector.
         '''
         raise NotImplementedError
 
@@ -289,13 +289,10 @@ class CallExpr(Expr):
         return self.to_str()
 
     def to_str(self, *, is_method=False) -> str:
-        try:
-            fn = self._func.resolve_value().__name__
-        except RequireArgumentError:
-            fn = str(self._func)
+        fn = str(self._func)
         args = self._args[1:] if is_method else self._args
         ls = [str(x) for x in args]
-        ls += [f'{k}={repr(v)}' for k, v in self._kwargs.items()]
+        ls += [f'{k}={v}' for k, v in self._kwargs.items()]
         args_str = ', '.join(ls)
         return f'{fn}({args_str})'
 
@@ -303,7 +300,11 @@ class CallExpr(Expr):
         return self.resolve_value()
 
     def __repr__(self):
-        return f'CallExpr({self})'
+        exprs = [repr(self._func)]
+        exprs.extend([repr(a) for a in self._args])
+        exprs.extend([f'k={repr(v)}' for k, v in self._kwargs.items()])
+        inside = ', '.join(exprs)
+        return f'CallExpr({inside})'
 
     def accept(self, visitor):
         return visitor.visit_call_expr(self)

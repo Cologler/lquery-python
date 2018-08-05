@@ -49,6 +49,9 @@ class FuncExprBuilder:
         raise NotSupportError(msg=msg, instr=instr)
 
     def _stack_pop(self, count):
+        '''
+        return a list of exprs.
+        '''
         if count > 0:
             items = self._stack[-count:]
             self._stack = self._stack[0:-count]
@@ -255,6 +258,17 @@ class FuncExprBuilder:
             expr = Make.binary_op(left, 'or', right)
             self._stack.append(expr)
         self._hook(instr.argval, callback)
+
+    def load_method(self, instr: dis.Instruction):
+        # opcode=160
+        return self.load_attr(instr)
+
+    def call_method(self, instr: dis.Instruction):
+        # opcode=161
+        args = self._stack_pop(instr.argval)
+        func = self._stack.pop()
+        expr = Make.call(func, *args)
+        self._stack.append(expr)
 
 
 def to_func_expr(func):

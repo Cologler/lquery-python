@@ -12,19 +12,19 @@ class ExprVisitor:
         return expr
 
     def visit_attr_expr(self, expr):
-        return expr
+        return self.visit(expr)
 
     def visit_index_expr(self, expr):
-        return expr
+        return self.visit(expr)
 
     def visit_call_expr(self, expr):
-        return expr
+        return self.visit(expr)
 
     def visit_binary_expr(self, expr):
-        return expr
+        return self.visit(expr)
 
     def visit_func_expr(self, expr):
-        return expr
+        return self.visit(expr)
 
 
 class DefaultExprVisitor(ExprVisitor):
