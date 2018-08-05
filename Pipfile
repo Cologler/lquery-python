@@ -11,7 +11,6 @@ bytecode = "*"
 [dev-packages]
 pytest = "*"
 tinydb = "*"
-pylint = "*"
 
 [requires]
 python_version = "3.7"
