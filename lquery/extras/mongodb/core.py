@@ -32,7 +32,7 @@ from .options import QueryOptions, QueryOptionsUpdater
 VISITOR = DefaultExprVisitor()
 
 
-class MongoDbQueryImpl(Queryable):
+class NextMongoDbQuery(Queryable):
     def __init__(self, expr, collection, query_options):
         super().__init__(expr, PROVIDER)
         self._collection = collection
@@ -57,7 +57,7 @@ class MongoDbQueryImpl(Queryable):
         reduce_info.add_node(ReduceInfo.TYPE_SQL, self.expr)
 
 
-class MongoDbQuery(MongoDbQueryImpl):
+class MongoDbQuery(NextMongoDbQuery):
     def __init__(self, collection):
         super().__init__(Make.ref(collection), collection, QueryOptions())
 
@@ -221,7 +221,7 @@ class MongoDbQueryProvider(IterableQueryProvider):
             if impl.always_empty:
                 return EmptyQuery(expr, impl.always_empty.reason)
             if apply:
-                return MongoDbQueryImpl(expr, queryable.collection, query_options)
+                return NextMongoDbQuery(expr, queryable.collection, query_options)
         return super().execute(expr)
 
 
