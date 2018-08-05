@@ -6,7 +6,7 @@
 # ----------
 
 from abc import abstractmethod, abstractproperty
-from typing import Optional, Callable, Union
+from typing import Optional, Union
 from collections import namedtuple, Iterable
 import operator
 
@@ -116,6 +116,7 @@ class ReduceInfo:
 
 
 class IQueryProvider:
+
     '''
     interface of `QueryProvider`
     '''
@@ -187,42 +188,42 @@ class Queryable(IQueryable):
     # transforms
 
     @typechecked
-    def select(self, selector: Callable):
+    def select(self, selector: callable):
         return self._then(select, selector)
 
     @typechecked
-    def select_with_index(self, selector: Callable=IndexedElement, transform: Callable=identity):
+    def select_with_index(self, selector: callable=IndexedElement, transform: callable=identity):
         return self._then(select_with_index, selector, transform)
 
     @typechecked
-    def select_with_correspondence(self, selector: Callable,
-                                   result_selector: Callable=KeyedElement):
+    def select_with_correspondence(self, selector: callable,
+                                   result_selector: callable=KeyedElement):
         return self._then(select_with_correspondence, selector, result_selector)
 
     @typechecked
-    def select_many(self, collection_selector: Callable=identity,
-                    result_selector: Callable=identity):
+    def select_many(self, collection_selector: callable=identity,
+                    result_selector: callable=identity):
         return self._then(select_many, collection_selector, result_selector)
 
     @typechecked
-    def select_many_with_index(self, collection_selector: Callable = IndexedElement,
-            result_selector: Callable = lambda source_element, collection_element: collection_element):
+    def select_many_with_index(self, collection_selector: callable = IndexedElement,
+            result_selector: callable = lambda source_element, collection_element: collection_element):
         return self._then(select_many_with_index, collection_selector, result_selector)
 
     @typechecked
     def select_many_with_correspondence(self,
-            collection_selector: Callable=identity, result_selector: Callable=KeyedElement):
+            collection_selector: callable=identity, result_selector: callable=KeyedElement):
         return self._then(select_many_with_correspondence, collection_selector, result_selector)
 
     @typechecked
-    def group_by(self, key_selector: Callable=identity, element_selector: Callable=identity,
-            result_selector: Callable=lambda key, grouping: grouping):
+    def group_by(self, key_selector: callable=identity, element_selector: callable=identity,
+            result_selector: callable=lambda key, grouping: grouping):
         return self._then(group_by, key_selector, element_selector, result_selector)
 
     # filter
 
     @typechecked
-    def where(self, predicate: Callable):
+    def where(self, predicate: callable):
         '''
         Filters elements according to whether they match a predicate.
         '''
@@ -240,7 +241,7 @@ class Queryable(IQueryable):
         return self._then(take, count_)
 
     @typechecked
-    def take_while(self, predicate: Callable):
+    def take_while(self, predicate: callable):
         return self._then(take_while, predicate)
 
     @typechecked
@@ -248,21 +249,21 @@ class Queryable(IQueryable):
         return self._then(skip, count_)
 
     @typechecked
-    def skip_while(self, predicate: Callable):
+    def skip_while(self, predicate: callable):
         return self._then(skip_while, predicate)
 
     @typechecked
-    def distinct(self, selector: Callable=identity):
+    def distinct(self, selector: callable=identity):
         return self._then(distinct, selector)
 
     # sort
 
     @typechecked
-    def order_by(self, key_selector: Callable=identity):
+    def order_by(self, key_selector: callable=identity):
         return self._then(order_by, key_selector)
 
     @typechecked
-    def order_by_descending(self, key_selector: Callable=identity):
+    def order_by_descending(self, key_selector: callable=identity):
         return self._then(order_by_descending, key_selector)
 
     def reverse(self):
@@ -274,27 +275,27 @@ class Queryable(IQueryable):
         return self._then(default_if_empty, default)
 
     @typechecked
-    def first(self, predicate: Optional[Callable]=None):
+    def first(self, predicate: Optional[callable]=None):
         return self._then(first, predicate)
 
     @typechecked
-    def first_or_default(self, default, predicate: Optional[Callable]=None):
+    def first_or_default(self, default, predicate: Optional[callable]=None):
         return self._then(first_or_default, default, predicate)
 
     @typechecked
-    def last(self, predicate: Optional[Callable]=None):
+    def last(self, predicate: Optional[callable]=None):
         return self._then(last, predicate)
 
     @typechecked
-    def last_or_default(self, default, predicate: Optional[Callable]=None):
+    def last_or_default(self, default, predicate: Optional[callable]=None):
         return self._then(last_or_default, default, predicate)
 
     @typechecked
-    def single(self, predicate: Optional[Callable]=None):
+    def single(self, predicate: Optional[callable]=None):
         return self._then(single, predicate)
 
     @typechecked
-    def single_or_default(self, default, predicate: Optional[Callable]=None):
+    def single_or_default(self, default, predicate: Optional[callable]=None):
         return self._then(single_or_default, default, predicate)
 
     @typechecked
@@ -304,7 +305,7 @@ class Queryable(IQueryable):
     # get queryable props
 
     @typechecked
-    def count(self, predicate: Optional[Callable]=None) -> int:
+    def count(self, predicate: Optional[callable]=None) -> int:
         return self._then(count, predicate)
 
     # two collection operations
@@ -327,62 +328,62 @@ class Queryable(IQueryable):
 
     @typechecked
     def join(self, inner_iterable: Iterable,
-             outer_key_selector: Callable=identity, inner_key_selector: Callable=identity,
-             result_selector: Callable=lambda outer, inner: (outer, inner)):
+             outer_key_selector: callable=identity, inner_key_selector: callable=identity,
+             result_selector: callable=lambda outer, inner: (outer, inner)):
         return self._then(join, inner_iterable,
                           outer_key_selector, inner_key_selector, result_selector)
 
     @typechecked
     def group_join(self, inner_iterable: Iterable,
-                   outer_key_selector: Callable=identity, inner_key_selector: Callable=identity,
-                   result_selector: Callable=lambda outer, grouping: grouping):
+                   outer_key_selector: callable=identity, inner_key_selector: callable=identity,
+                   result_selector: callable=lambda outer, grouping: grouping):
         return self._then(group_join, inner_iterable,
                           outer_key_selector, inner_key_selector, result_selector)
 
     @typechecked
-    def zip(self, other: Iterable, result_selector: Callable=lambda x, y: (x, y)):
+    def zip(self, other: Iterable, result_selector: callable=lambda x, y: (x, y)):
         return self._then(zip, other, result_selector)
 
     # for numbers
 
     @typechecked
-    def min(self, selector: Callable=identity):
+    def min(self, selector: callable=identity):
         return self._then(min, selector)
 
     @typechecked
-    def max(self, selector: Callable=identity):
+    def max(self, selector: callable=identity):
         return self._then(max, selector)
 
     # aggregates
 
     @typechecked
-    def sum(self, selector: Callable=identity):
+    def sum(self, selector: callable=identity):
         return self._then(sum, selector)
 
     @typechecked
-    def average(self, selector: Callable=identity):
+    def average(self, selector: callable=identity):
         return self._then(average, selector)
 
     @typechecked
-    def aggregate(self, reducer: Callable, seed, result_selector: Callable=identity):
+    def aggregate(self, reducer: callable, seed, result_selector: callable=identity):
         return self._then(aggregate, reducer, seed, result_selector)
 
     # logic operations
 
     @typechecked
-    def any(self, predicate: Callable=None):
+    def any(self, predicate: callable=None):
         return self._then(any, predicate)
 
     @typechecked
-    def all(self, predicate: Callable=bool):
+    def all(self, predicate: callable=bool):
         return self._then(all, predicate)
 
     @typechecked
-    def contains(self, value, equality_comparer: Callable=operator.eq):
+    def contains(self, value, equality_comparer: callable=operator.eq):
         return self._then(contains, value, equality_comparer)
 
     @typechecked
-    def sequence_equal(self, other, equality_comparer: Callable=operator.eq) -> bool:
+    def sequence_equal(self, other, equality_comparer: callable=operator.eq) -> bool:
         return self._then(sequence_equal, other, equality_comparer)
 
     # get iter result
