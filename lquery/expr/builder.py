@@ -88,11 +88,6 @@ class FuncExprBuilder:
         expr = Make.const(instr.argval)
         self._stack.append(expr)
 
-    def load_attr(self, instr: dis.Instruction):
-        src = self._stack.pop()
-        expr = Make.attr(src, instr.argval)
-        self._stack.append(expr)
-
     def load_deref(self, instr: dis.Instruction):
         # load from closure
         cell = self._func.__closure__[instr.arg]
@@ -113,19 +108,6 @@ class FuncExprBuilder:
             self._stack.append(expr)
             return
         return self._not_support(instr=instr)
-
-    def binary_subscr(self, _: dis.Instruction):
-        # index like a[b]
-        key = self._stack.pop()
-        src = self._stack.pop()
-        expr = Make.index(src, key)
-        self._stack.append(expr)
-
-    def binary_and(self, _: dis.Instruction):
-        right = self._stack.pop()
-        left = self._stack.pop()
-        expr = Make.binary_op(left, '&', right)
-        self._stack.append(expr)
 
     def compare_op(self, instr: dis.Instruction):
         right = self._stack.pop()
@@ -184,18 +166,72 @@ class FuncExprBuilder:
         # opcode=4
         self._stack.append(self._stack[-1])
 
-    def binary_add(self, _: dis.Instruction):
-        # opcode=23
+    def _unary_op(self, op: str):
+        expr = Make.unary_op(self._stack.pop(), op)
+        self._stack.append(expr)
+
+    def unary_not(self, _: dis.Instruction):
+        # opcode=12
+        self._unary_op('not')
+
+    def _binary_op(self, op: str):
         right = self._stack.pop()
         left = self._stack.pop()
-        expr = Make.binary_op(left, '+', right)
+        expr = Make.binary_op(left, op, right)
         self._stack.append(expr)
+
+    def binary_modulo(self, _: dis.Instruction):
+        # opcode=23
+        self._binary_op('%')
+
+    def binary_add(self, _: dis.Instruction):
+        # opcode=23
+        self._binary_op('+')
 
     def binary_subtract(self, _: dis.Instruction):
         # opcode=24
-        right = self._stack.pop()
-        left = self._stack.pop()
-        expr = Make.binary_op(left, '-', right)
+        self._binary_op('-')
+
+    def binary_subscr(self, _: dis.Instruction):
+        # opcode=25
+        # index like a[b]
+        key = self._stack.pop()
+        src = self._stack.pop()
+        expr = Make.index(src, key)
+        self._stack.append(expr)
+
+    def binary_floor_divide(self, _: dis.Instruction):
+        # opcode=26
+        self._binary_op('//')
+
+    def binary_true_divide(self, _: dis.Instruction):
+        # opcode=27
+        self._binary_op('/')
+
+    def inplace_add(self, _: dis.Instruction):
+        # opcode=55
+        self._binary_op('+=')
+
+    def inplace_subtract(self, _: dis.Instruction):
+        # opcode=56
+        self._binary_op('-=')
+
+    def inplace_multiply(self, _: dis.Instruction):
+        # opcode=57
+        self._binary_op('*=')
+
+    def binary_and(self, _: dis.Instruction):
+        # opcode=64
+        self._binary_op('&')
+
+    def binary_or(self, _: dis.Instruction):
+        # opcode=66
+        self._binary_op('|')
+
+    def load_attr(self, instr: dis.Instruction):
+        # opcode=106
+        src = self._stack.pop()
+        expr = Make.attr(src, instr.argval)
         self._stack.append(expr)
 
     def jump_if_false_or_pop(self, instr: dis.Instruction):

@@ -159,6 +159,30 @@ class IndexExpr(Expr):
         return visitor.visit_index_expr(self)
 
 
+class UnaryExpr(Expr):
+    __slots__ = ('_expr', '_op')
+
+    @typechecked
+    def __init__(self, expr: IExpr, op: str):
+        self._expr = expr
+        self._op = op
+
+    @property
+    def expr(self):
+        return self._expr
+
+    @property
+    def op(self):
+        return self._op
+
+    def __str__(self):
+        op = self._op
+        return f'{op} ({str(self._expr)})'
+
+    def __repr__(self):
+        return f'UnaryExpr({repr(self._op)}, {repr(self._expr)})'
+
+
 class BinaryExpr(Expr):
     __slots__ = ('_left', '_right', '_op')
 
@@ -195,7 +219,7 @@ class BinaryExpr(Expr):
         return f'{str(self._left)} {op} {str(self._right)}'
 
     def __repr__(self):
-        return f'BinaryExpr({repr(self._left)}, {repr(self._right)}, {repr(self._op)})'
+        return f'BinaryExpr({repr(self._left)}, {repr(self._op)}, {repr(self._right)})'
 
     def accept(self, visitor):
         return visitor.visit_binary_expr(self)
@@ -355,6 +379,10 @@ class Make:
         create a expr for represents a binary operation.
         '''
         return BinaryExpr(left, op, right)
+
+    @staticmethod
+    def unary_op(expr: IExpr, op: str):
+        return UnaryExpr(expr, op)
 
     @staticmethod
     def attr(expr: IExpr, name: str):
