@@ -27,7 +27,7 @@ class NotSupportError(Exception):
         super().__init__(msg or '')
 
 
-class ExprBuilder:
+class FuncExprBuilder:
     def __init__(self, func):
         self._func = func
         self._bytecode = dis.Bytecode(self._func)
@@ -190,6 +190,13 @@ class ExprBuilder:
         # opcode=4
         self._stack.append(self._stack[-1])
 
+    def binary_subtract(self, _: dis.Instruction):
+        # opcode=24
+        right = self._stack.pop()
+        left = self._stack.pop()
+        expr = Make.binary_op(left, right, '-')
+        self._stack.append(expr)
+
     def jump_if_false_or_pop(self, instr: dis.Instruction):
         # opcode=111
         # If TOS is false, sets the bytecode counter to target and leaves TOS on the stack.
@@ -225,7 +232,7 @@ def to_func_expr(func):
     if DEBUG:
         print('parsing func: ', func)
     try:
-        expr = ExprBuilder(func).build()
+        expr = FuncExprBuilder(func).build()
     except NotSupportError as err:
         if DEBUG:
             print(err)
