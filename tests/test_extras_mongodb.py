@@ -377,15 +377,29 @@ class TestMongoDbReduce(unittest.TestCase):
             [reduce_info.TYPE_SRC] + [reduce_info.TYPE_SQL] * 2 + [reduce_info.TYPE_MEMORY] * 2
         )
 
+def test_field_equals_bool():
+    source = QUERY_CLS(None)
+
+    query = source.where(lambda x: x.is_user)
+    assert query.query_options.filter == {'is_user': True}
+
+    query = source.where(lambda x: x.is_user == True)
+    assert query.query_options.filter == {'is_user': True}
+
+    query = source.where(lambda x: not x.is_user)
+    assert query.query_options.filter == {'is_user': False}
+
+    query = source.where(lambda x: x.is_user == False)
+    assert query.query_options.filter == {'is_user': False}
+
 
 def test_field_exists():
-    query = QUERY_CLS(None)
-    query = query.where(lambda x: hasattr(x.name, 'first'))
+    source = QUERY_CLS(None)
+
+    query = source.where(lambda x: hasattr(x.name, 'first'))
     assert query.query_options.filter == {'name.first': {'$exists': True}}
 
-def test_field_not_exists():
-    query = QUERY_CLS(None)
-    query = query.where(lambda x: not hasattr(x.name, 'first'))
+    query = source.where(lambda x: not hasattr(x.name, 'first'))
     assert query.query_options.filter == {'name.first': {'$exists': False}}
 
 

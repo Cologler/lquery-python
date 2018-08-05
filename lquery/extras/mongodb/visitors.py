@@ -76,6 +76,10 @@ class QueryOptionsRootExprVisitor(QueryOptionsExprVisitor):
 
 
 class QueryOptionsCallWhereExprVisitor(QueryOptionsExprVisitor):
+    def visit_attr_expr(self, expr: AttrExpr):
+        indexes = self._get_parameter_indexes(expr)
+        return QueryOptionsUpdater.filter_field(indexes)
+
     def visit_unary_expr(self, expr: UnaryExpr):
         if expr.op == 'not':
             updater = expr.expr.accept(self)

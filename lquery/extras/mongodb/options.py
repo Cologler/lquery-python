@@ -39,8 +39,13 @@ class QueryOptionsUpdater:
 
     @staticmethod
     def add_filter_field(field_name, value):
-        updater = QueryOptionsFilterFieldUpdater()
+        updater = QueryOptionsFilterFieldsListUpdater()
         updater.add_pairs(field_name, value)
+        return updater
+
+    @staticmethod
+    def filter_field(field_name):
+        updater = QueryOptionsFilterFieldUpdater(field_name)
         return updater
 
     @staticmethod
@@ -72,6 +77,22 @@ class QueryOptionsLimitUpdater(QueryOptionsUpdater):
 
 
 class QueryOptionsFilterFieldUpdater(QueryOptionsUpdater):
+    def __init__(self, field_name, *, value: bool=True):
+        self._field_name = field_name
+        self._value = value
+
+    def apply(self, options: QueryOptions):
+        data = options.filter.get(self._field_name, None)
+        if data is None:
+            options.filter[self._field_name] = self._value
+        else:
+            raise NotSupportError
+
+    def op_not(self):
+        return QueryOptionsFilterFieldUpdater(self._field_name, value=not self._value)
+
+
+class QueryOptionsFilterFieldsListUpdater(QueryOptionsUpdater):
     def __init__(self):
         self.data = {}
 
@@ -120,8 +141,8 @@ class QueryOptionsFilterFieldUpdater(QueryOptionsUpdater):
                 options.filter[name] = value
 
     def __and__(self, other):
-        assert isinstance(other, QueryOptionsFilterFieldUpdater)
-        new_updater = QueryOptionsFilterFieldUpdater()
+        assert isinstance(other, QueryOptionsFilterFieldsListUpdater)
+        new_updater = QueryOptionsFilterFieldsListUpdater()
         for name, value in self.data.items():
             new_updater.add_pairs(name, value)
         for name, value in other.data.items():
