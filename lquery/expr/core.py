@@ -12,19 +12,22 @@ from typeguard import typechecked
 # interfaces
 
 class IExpr:
+    __slots__ = ()
+
     def accept(self, visitor):
         return visitor.visit(self)
 
 # base classes
 
 class Expr(IExpr):
-    pass
+    __slots__ = ()
 
 
 class ValueExpr(Expr):
     '''
     the base class for both of `ConstExpr` and `ReferenceExpr`.
     '''
+    __slots__ = ('_value')
 
     def __init__(self, value):
         self._value = value
@@ -49,6 +52,7 @@ class ParameterExpr(Expr):
     '''
     represents raw input parameter.
     '''
+    __slots__ = ('_name')
 
     @typechecked
     def __init__(self, name: str):
@@ -69,20 +73,21 @@ class ConstExpr(ValueExpr):
     '''
     represents value expr for immutable object.
     '''
-    pass
+    __slots__ = ()
 
 
 class ReferenceExpr(ValueExpr):
     '''
     represents value expr for both of immutable and mutable object.
     '''
-    pass
+    __slots__ = ()
 
 
 class DerefExpr(ValueExpr):
     '''
     represents value expr for closure variable.
     '''
+    __slots__ = ()
 
     def __init__(self, cell):
         super().__init__(cell)
@@ -96,6 +101,7 @@ class AttrExpr(Expr):
     '''
     represents `expr.attr`.
     '''
+    __slots__ = ('_expr', '_name')
 
     @typechecked
     def __init__(self, expr: IExpr, name: str):
@@ -124,6 +130,7 @@ class IndexExpr(Expr):
     '''
     represents `expr[name]`.
     '''
+    __slots__ = ('_expr', '_key')
 
     @typechecked
     def __init__(self, expr: IExpr, key: IExpr):
@@ -153,6 +160,8 @@ class IndexExpr(Expr):
 
 
 class BinaryExpr(Expr):
+    __slots__ = ('_left', '_right', '_op')
+
     OP_MAP = {
         '__eq__': '==',
         '__gt__': '>',
@@ -193,6 +202,8 @@ class BinaryExpr(Expr):
 
 
 class CallExpr(Expr):
+    __slots__ = ('_func', '_args', '_kwargs')
+
     def __init__(self, func: Callable, *args: List[IExpr], **kwargs: Dict[str, IExpr]):
         # all item of args and value of kwargs are union(ValueExpr, ParameterExpr)
         super().__init__()
@@ -236,6 +247,8 @@ class CallExpr(Expr):
 
 
 class FuncExpr(Expr):
+    __slots__ = ('_body', '_args')
+
     def __init__(self, body : IExpr, *args: List[IExpr]):
         super().__init__()
         self._body = body
@@ -261,6 +274,8 @@ class FuncExpr(Expr):
 
 
 class BuildListExpr(Expr):
+    __slots__ = ('_items')
+
     def __init__(self, *items: List[ValueExpr]):
         self._items = items
 
@@ -284,6 +299,8 @@ class BuildListExpr(Expr):
 
 
 class BuildDictExpr(Expr):
+    __slots__ = ('_kvps')
+
     def __init__(self, *kvps: List[Tuple[ValueExpr, ValueExpr]]):
         self._kvps = kvps
 
