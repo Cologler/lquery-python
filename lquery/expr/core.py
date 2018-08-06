@@ -94,6 +94,9 @@ class ParameterExpr(Expr):
     def __repr__(self):
         return f'ParameterExpr({repr(self._name)})'
 
+    def accept(self, visitor):
+        return visitor.visit_parameter_expr(self)
+
     def resolve_value(self):
         raise RequireArgumentError
 
@@ -104,12 +107,18 @@ class ConstExpr(ValueExpr):
     '''
     __slots__ = ()
 
+    def accept(self, visitor):
+        return visitor.visit_const_expr(self)
+
 
 class ReferenceExpr(ValueExpr):
     '''
     represents value expr for both of immutable and mutable object.
     '''
     __slots__ = ()
+
+    def accept(self, visitor):
+        return visitor.visit_reference_expr(self)
 
 
 class DerefExpr(ValueExpr):
@@ -124,6 +133,9 @@ class DerefExpr(ValueExpr):
     @property
     def value(self):
         return self._value.cell_contents
+
+    def accept(self, visitor):
+        return visitor.visit_deref_expr(self)
 
     def resolve_value(self):
         return self._value.cell_contents

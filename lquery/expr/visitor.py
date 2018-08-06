@@ -29,6 +29,18 @@ class ExprVisitor:
     def visit_binary_expr(self, expr):
         return self.visit(expr)
 
+    def visit_parameter_expr(self, expr):
+        return self.visit(expr)
+
+    def visit_const_expr(self, expr):
+        return self.visit(expr)
+
+    def visit_reference_expr(self, expr):
+        return self.visit(expr)
+
+    def visit_deref_expr(self, expr):
+        return self.visit(expr)
+
 
 class DefaultExprVisitor(ExprVisitor):
 
@@ -65,3 +77,8 @@ class DefaultExprVisitor(ExprVisitor):
         if body is not expr.body:
             return Make.func(body, *expr.args)
         return expr
+
+
+class ValueResolverExprVisitor(ExprVisitor):
+    def visit(self, expr):
+        return expr.resolve_value()
