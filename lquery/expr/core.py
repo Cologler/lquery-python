@@ -173,6 +173,32 @@ class AttrExpr(Expr):
         return getattr(self._expr.resolve_value(), self._name)
 
 
+class AssignExpr(Expr):
+    '''
+    represents `target = value`.
+    '''
+    __slots__ = ('_target', '_value')
+
+    def __init__(self, target: AttrExpr, value: IExpr):
+        super().__init__()
+        self._target = target
+        self._value = value
+
+    @property
+    def target(self):
+        return self._target
+
+    @property
+    def value(self):
+        return self._value
+
+    def __str__(self):
+        return f'{self._target} = {self._value}'
+
+    def __repr__(self):
+        return f'AssignExpr({repr(self._target)}, {repr(self._value)})'
+
+
 class IndexExpr(Expr):
     '''
     represents `expr[name]`.
@@ -197,7 +223,7 @@ class IndexExpr(Expr):
         return self._key
 
     def __str__(self):
-        return f'{str(self._expr)}[{self._key}]'
+        return f'{self._expr}[{self._key}]'
 
     def __repr__(self):
         return f'IndexExpr({repr(self._expr)}, {repr(self._key)})'
@@ -440,6 +466,10 @@ class Make:
     @staticmethod
     def attr(expr: IExpr, name: str):
         return AttrExpr(expr, name)
+
+    @staticmethod
+    def assign(target: IExpr, value: IExpr):
+        return AssignExpr(target, value)
 
     @staticmethod
     def index(expr: IExpr, key: IExpr):

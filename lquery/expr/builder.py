@@ -83,10 +83,6 @@ class FuncExprBuilder:
         expr = Make.func(body, *self._args)
         return expr
 
-    def load_fast(self, instr: dis.Instruction):
-        # load arguments
-        self._stack.append(self._args_map[instr.argval])
-
     def load_const(self, instr: dis.Instruction):
         expr = Make.const(instr.argval)
         self._stack.append(expr)
@@ -117,10 +113,6 @@ class FuncExprBuilder:
         left = self._stack.pop()
         expr = Make.binary_op(left, instr.argval, right)
         self._stack.append(expr)
-
-    def return_value(self, instr: dis.Instruction):
-        # ignore.
-        pass
 
     def build_list(self, instr: dis.Instruction):
         items = self._stack_pop(instr.arg)
@@ -229,6 +221,18 @@ class FuncExprBuilder:
         # opcode=66
         self._binary_op('|')
 
+    def return_value(self, instr: dis.Instruction):
+        # opcode=83
+        # ignore.
+        pass
+
+    def store_attr(self, instr: dis.Instruction):
+        # opcode=95
+        src = self._stack.pop()
+        attr_expr = Make.attr(src, instr.argval)
+        expr = Make.assign(attr_expr, self._stack.pop())
+        self._stack.append(expr)
+
     def load_attr(self, instr: dis.Instruction):
         # opcode=106
         src = self._stack.pop()
@@ -258,6 +262,11 @@ class FuncExprBuilder:
             expr = Make.binary_op(left, 'or', right)
             self._stack.append(expr)
         self._hook(instr.argval, callback)
+
+    def load_fast(self, instr: dis.Instruction):
+        # opcode=124
+        # load arguments
+        self._stack.append(self._args_map[instr.argval])
 
     def load_method(self, instr: dis.Instruction):
         # opcode=160
