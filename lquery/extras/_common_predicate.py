@@ -5,6 +5,16 @@
 # the common predicate for databases
 # ----------
 
+'''
+all operators:
+
+# unary
+not,
+
+# binary
+==, >, >=, <, <=,
+'''
+
 from operator import attrgetter
 
 from ._common import NotSupportError, AlwaysEmptyError
@@ -12,6 +22,9 @@ from ._common import NotSupportError, AlwaysEmptyError
 
 class Predicate:
     def can_merge(self, other) -> bool:
+        '''
+        test whether can merge two predicate.
+        '''
         return False
 
     def merge(self, other):
@@ -56,18 +69,19 @@ class BinaryPredicate(Predicate):
         return super().can_merge(other)
 
     def merge(self, other):
-        if self._op == other.op:
-            return self._TABLE_MERGE_SAME_OP[self._op](self, other)
-        else:
-            opps = [tuple([self._op, other.op]), tuple([other.op, self._op])]
-            for opp in opps:
-                func = self._TABLE_MERGE_DIFF_OP.get(opp)
-                if func is not None:
-                    if opp[0] == self._op:
-                        return func(self, other)
-                    else:
-                        return func(other, self)
-        raise NotImplementedError
+        if isinstance(other, BinaryPredicate):
+            if self._op == other.op:
+                return self._TABLE_MERGE_SAME_OP[self._op](self, other)
+            else:
+                opps = [tuple([self._op, other.op]), tuple([other.op, self._op])]
+                for opp in opps:
+                    func = self._TABLE_MERGE_DIFF_OP.get(opp)
+                    if func is not None:
+                        if opp[0] == self._op:
+                            return func(self, other)
+                        else:
+                            return func(other, self)
+        return super().merge(other)
 
     _TABLE_MERGE_SAME_OP = {}
 
@@ -92,43 +106,43 @@ class BinaryPredicate(Predicate):
 
 
 @BinaryPredicate.cb_merge_same_op('==')
-def same_merge_eq(self, other):
+def same_op_merge_eq(self, other):
     if self.value != other.value:
         raise AlwaysEmptyError(f'cannot equals both value: ({self.value}, {other})')
     return self
 
 @BinaryPredicate.cb_merge_same_op('>', '>=')
-def same_merge_g(self, other):
+def same_op_merge_g(self, other):
     # take max
     return max(self, other, key=attrgetter('value'))
 
 @BinaryPredicate.cb_merge_same_op('<', '<=')
-def same_merge_l(self, other):
+def same_op_merge_l(self, other):
     # take min
     return min(self, other, key=attrgetter('value'))
 
 @BinaryPredicate.cb_merge_diff_op(('==', '>'))
-def diff_merge_eq_gt(first, second):
+def diff_op_merge_eq_gt(first, second):
     if first.value <= second.value:
         raise AlwaysEmptyError(f'cannot ($ == {first.value}) and ($ {second.op} {second.value})')
     return first
 
 @BinaryPredicate.cb_merge_diff_op(('==', '>='))
-def diff_merge_eq_ge(first, second):
+def diff_op_merge_eq_ge(first, second):
     if first.value < second.value:
         raise AlwaysEmptyError(f'cannot ($ == {first.value}) and ($ {second.op} {second.value})')
     return first
 
 @BinaryPredicate.cb_merge_diff_op(('>=', '>'))
-def diff_merge_g(first, second):
+def diff_op_merge_g(first, second):
     # take max
     if first.value == second.value:
         return second
-    return same_merge_g(first, second)
+    return max(first, second, key=attrgetter('value'))
 
 @BinaryPredicate.cb_merge_diff_op(('<', '<='))
-def diff_merge_l(first, second):
+def diff_op_merge_l(first, second):
     # take min
     if first.value == second.value:
         return first
-    return same_merge_l(first, second)
+    return min(first, second, key=attrgetter('value'))
