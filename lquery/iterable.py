@@ -6,12 +6,12 @@
 # ----------
 
 from typing import Union
-from collections import Iterable
+from collections.abc import Iterable
 
 from typeguard import typechecked
 
 from .expr import CallExpr, ValueExpr, Make
-from .queryable import Queryable, IQueryProvider, IQueryable, ReduceInfo
+from .queryable import Queryable, IQueryProvider, ReduceInfo
 
 def get_result(expr):
     if type(expr) is CallExpr:

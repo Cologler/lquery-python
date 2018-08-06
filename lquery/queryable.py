@@ -6,8 +6,9 @@
 # ----------
 
 from abc import abstractmethod, abstractproperty
-from typing import Optional, Union
-from collections import namedtuple, Iterable
+from typing import Optional, Union, List
+from collections import namedtuple
+from collections.abc import Iterable
 import operator
 
 from typeguard import typechecked
@@ -37,7 +38,7 @@ from .func import (
     # for numbers
     min, max,
     # aggregates
-    sum, average,
+    sum, average, aggregate,
     # logic operations
     any, all, contains, sequence_equal,
 )
@@ -79,7 +80,7 @@ class ReduceInfo:
 
     def __init__(self, queryable: IQueryable):
         self.querable = queryable # need to set from stack top.
-        self._details = []
+        self._details: List[ReduceInfoNode] = []
 
     def add_node(self, type_, expr):
         self._details.append(ReduceInfoNode(type_, expr))
