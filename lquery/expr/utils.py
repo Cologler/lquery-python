@@ -28,7 +28,7 @@ def get_deep_names(expr: Union[AttrExpr, IndexExpr]):
         if isinstance(cur_expr, AttrExpr):
             fields.append(cur_expr.name)
         elif isinstance(cur_expr.key, ValueExpr):
-            fields.append(cur_expr.key.value)
+            fields.append(cur_expr.key.resolve_value())
         else:
             break
         cur_expr = cur_expr.expr

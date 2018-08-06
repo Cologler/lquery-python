@@ -60,18 +60,15 @@ class ValueExpr(Expr):
         return self._value
 
     def __str__(self):
-        return repr(self.value)
+        return repr(self.resolve_value())
 
     def __repr__(self):
-        return f'{type(self).__name__}({repr(self.value)})'
+        return f'{type(self).__name__}({repr(self.resolve_value())})'
 
     def resolve_value(self):
         return self._value
 
 # classes
-
-class EmptyExpr(Expr):
-    pass
 
 
 class ParameterExpr(Expr):
@@ -121,24 +118,27 @@ class ReferenceExpr(ValueExpr):
         return visitor.visit_reference_expr(self)
 
 
-class DerefExpr(ValueExpr):
+class DerefExpr(Expr):
     '''
     represents value expr for closure variable.
     '''
-    __slots__ = ()
+    __slots__ = ('_cell')
 
     def __init__(self, cell):
-        super().__init__(cell)
+        super().__init__()
+        self._cell = cell
 
-    @property
-    def value(self):
-        return self._value.cell_contents
+    def __str__(self):
+        return repr(self.resolve_value())
+
+    def __repr__(self):
+        return f'DerefExpr({repr(self.resolve_value())})'
 
     def accept(self, visitor):
         return visitor.visit_deref_expr(self)
 
     def resolve_value(self):
-        return self._value.cell_contents
+        return self._cell.cell_contents
 
 
 class AttrExpr(Expr):

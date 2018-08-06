@@ -75,18 +75,20 @@ class TestMongoDbGettingStartedExamples(unittest.TestCase):
         self.assertDictEqual(fc.filter, {'tags': ["red", "blank"]})
 
 
+def test_closure_key_should_not_be_capture_into_SQL():
+    k = 'status'
+    fc = FakeCollection([{'status': 'D'}, {'status': 'X'}])
+    mongo_query = QUERY_CLS(fc)
+    # filter should work:
+    assert mongo_query.where(lambda x: x[k] == 'D').to_list() == [{'status': 'D'}]
+    # but only work in memory.
+    assert fc.filter == {}
+
 class TestWhereStyle(unittest.TestCase):
     def test_dict_style(self):
         fc = FakeCollection()
         mongo_query = QUERY_CLS(fc)
         mongo_query.where(lambda x: x['status'] == 'D').to_list()
-        self.assertDictEqual(fc.filter, {'status': 'D'})
-
-    def test_dict_style_ref_key(self):
-        k = 'status'
-        fc = FakeCollection()
-        mongo_query = QUERY_CLS(fc)
-        mongo_query.where(lambda x: x[k] == 'D').to_list()
         self.assertDictEqual(fc.filter, {'status': 'D'})
 
     def test_attr_style(self):
