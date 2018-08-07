@@ -5,8 +5,8 @@
 # lquery for tinydb
 # ----------
 
-from ..queryable import Queryable
-from ..queryable_funcs import where
+from ..queryable import AbstractQueryable
+from ..queryable_funcs import Queryable
 from ..iterable import IterableQueryProvider
 from ..expr import Make
 from ..expr.builder import to_func_expr
@@ -15,7 +15,7 @@ from ..expr.emitter import emit
 from ._common_visitor import DbExprVisitor
 
 
-class TinyDbQuery(Queryable):
+class TinyDbQuery(AbstractQueryable):
     def __init__(self, table):
         super().__init__(Make.ref(table), PROVIDER)
 
@@ -31,7 +31,8 @@ class TinyDbQueryProvider(IterableQueryProvider):
         return super().execute(expr)
 
     def _get_rewrited_call_expr(self, call_expr):
-        if call_expr.func.resolve_value() is where:
+        func = call_expr.func.resolve_value()
+        if func is Queryable.where:
             func_expr = to_func_expr(call_expr.args[1].value)
             if func_expr is None:
                 return
@@ -42,7 +43,7 @@ class TinyDbQueryProvider(IterableQueryProvider):
             compiled_func = emit(expr)
             if compiled_func is None:
                 return
-            return Make.call(Make.ref(where), call_expr.args[0], Make.ref(compiled_func))
+            return Make.call(Make.ref(func), call_expr.args[0], Make.ref(compiled_func))
 
 
 class TinyDbExprVisitor(DbExprVisitor):

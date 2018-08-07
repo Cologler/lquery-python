@@ -7,7 +7,7 @@
 
 import re
 
-from ...queryable_funcs import where, skip, take
+from ...queryable_funcs import Queryable
 from ...expr import (
     RequireArgumentError,
     BinaryExpr, IndexExpr, CallExpr, AttrExpr, UnaryExpr,
@@ -44,11 +44,11 @@ class QueryOptionsRootExprVisitor(QueryOptionsExprVisitor):
 
     def visit_call_expr(self, expr: CallExpr) -> bool:
         func = expr.func.resolve_value()
-        if func is where:
+        if func is Queryable.where:
             return self._apply_call_where(expr.args[1].value)
-        elif func is skip:
+        elif func is Queryable.skip:
             return self._apply_call_skip(expr.args[1].value)
-        elif func is take:
+        elif func is Queryable.take:
             return self._apply_call_take(expr.args[1].value)
         raise NotSupportError
 

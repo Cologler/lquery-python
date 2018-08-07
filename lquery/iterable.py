@@ -11,7 +11,7 @@ from collections.abc import Iterable
 from typeguard import typechecked
 
 from .expr import CallExpr, ValueExpr, Make
-from .queryable import Queryable, IQueryProvider, ReduceInfo
+from .queryable import AbstractQueryable, IQueryProvider, ReduceInfo
 # load queryable_funcs for all extensions
 from .queryable_funcs import _
 
@@ -25,7 +25,7 @@ def get_result(expr):
         return expr.value
 
 
-class NextIterableQuery(Queryable):
+class NextIterableQuery(AbstractQueryable):
     def __init__(self, expr):
         super().__init__(expr, PROVIDER)
 
@@ -42,7 +42,7 @@ class IterableQuery(NextIterableQuery):
         super().__init__(Make.ref(items))
 
     def __str__(self):
-        return f'Queryable({self.expr.value})'
+        return f'IQueryable({self.expr.value})'
 
     def update_reduce_info(self, reduce_info):
         reduce_info.add_node(ReduceInfo.TYPE_SRC, self.expr)

@@ -5,7 +5,7 @@
 # a empty queryable
 # ----------
 
-from .queryable import Queryable, ReduceInfo, get_exprs, get_prev_queryable
+from .queryable import AbstractQueryable, ReduceInfo, get_exprs, get_prev_queryable
 from .iterable import IterableQueryProvider
 
 class EmptyReduceInfo(ReduceInfo):
@@ -21,7 +21,7 @@ class EmptyReduceInfo(ReduceInfo):
         return [f'all query was skiped since always empty: {self._mode_reason}']
 
 
-class EmptyQuery(Queryable):
+class EmptyQuery(AbstractQueryable):
     def __init__(self, expr, reason=''):
         super().__init__(expr, PROVIDER)
         self._reason = reason

@@ -7,8 +7,8 @@
 
 import copy
 
-from ...queryable import Queryable, ReduceInfo
-from ...queryable_funcs import where, skip, take
+from ...queryable import AbstractQueryable, ReduceInfo
+from ...queryable_funcs import Queryable
 from ...iterable import IterableQueryProvider
 from ...expr import Make
 from ...empty import EmptyQuery
@@ -19,14 +19,14 @@ from .options import QueryOptions
 from .visitors import QueryOptionsRootExprVisitor
 
 
-class NextMongoDbQuery(Queryable):
+class NextMongoDbQuery(AbstractQueryable):
     def __init__(self, expr, collection, query_options):
         super().__init__(expr, PROVIDER)
         self._collection = collection
         self._query_options = query_options or QueryOptions()
 
     def __str__(self):
-        return f'Queryable({self._collection})'
+        return f'IQueryable({self._collection})'
 
     def get_cursor(self):
         cursor = self._query_options.get_cursor(self._collection)
@@ -57,7 +57,7 @@ class MongoDbQuery(NextMongoDbQuery):
 
 class MongoDbQueryProvider(IterableQueryProvider):
     def execute(self, expr):
-        if expr.func.resolve_value() in (where, skip, take):
+        if expr.func.resolve_value() in (Queryable.where, Queryable.skip, Queryable.take):
             queryable = expr.args[0].value
             query_options = copy.deepcopy(queryable.query_options)
             visitor = QueryOptionsRootExprVisitor(query_options)

@@ -142,7 +142,7 @@ class ReduceInfo:
         print(f'reduce info of:\n  {self.querable}\n=>\n{reduce_info_str}')
 
 
-class Queryable(IQueryable):
+class AbstractQueryable(IQueryable):
     @typechecked
     def __init__(self, expr: Union[ValueExpr, CallExpr], provider: IQueryProvider):
         self._expr = expr
@@ -163,7 +163,7 @@ class Queryable(IQueryable):
             expr = expr.args[0].value.expr
             exprs.append(expr)
         exprs.reverse()
-        lines = [f'Queryable({repr(exprs[0].value)})']
+        lines = [f'IQueryable({repr(exprs[0].value)})']
         for expr in exprs[1:]:
             lines.append(expr.to_str(is_method=True))
         return '\n    .'.join(lines)
