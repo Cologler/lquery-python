@@ -7,7 +7,7 @@
 
 import abc
 import itertools
-from typing import Callable, Set, Dict, List, TypeVar, Any, Generic
+from typing import Callable, Dict, List, TypeVar, Any
 import operator
 
 from asq import query
@@ -36,14 +36,14 @@ def extend_linq(return_queryable: bool, name: str = None):
         return func
     return _
 
-class Queryable:
+class LinqQuery:
     '''
-    class `Queryable` is for type hint.
+    class `LinqQuery` is for type hint.
 
     for example, you may want to write:
 
     ```
-    query: Queryable = enumerable([1, 2, 3]).where(lambda x: x > 1)
+    query: LinqQuery = enumerable([1, 2, 3]).where(lambda x: x > 1)
     query.? # should show auto-completion list here
     ```
     '''

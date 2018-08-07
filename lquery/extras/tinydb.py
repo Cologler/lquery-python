@@ -6,7 +6,7 @@
 # ----------
 
 from ..queryable import AbstractQueryable
-from ..funcs import Queryable
+from ..funcs import LinqQuery
 from ..iterable import IterableQueryProvider
 from ..expr import Make
 from ..expr.builder import to_func_expr
@@ -32,7 +32,7 @@ class TinyDbQueryProvider(IterableQueryProvider):
 
     def _get_rewrited_call_expr(self, call_expr):
         func = call_expr.func.resolve_value()
-        if func is Queryable.where:
+        if func is LinqQuery.where:
             func_expr = to_func_expr(call_expr.args[1].value)
             if func_expr is None:
                 return

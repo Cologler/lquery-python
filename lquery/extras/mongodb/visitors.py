@@ -7,7 +7,7 @@
 
 import re
 
-from ...funcs import Queryable
+from ...funcs import LinqQuery
 from ...expr import (
     RequireArgumentError,
     BinaryExpr, IndexExpr, CallExpr, AttrExpr, UnaryExpr,
@@ -15,7 +15,7 @@ from ...expr import (
 )
 from ...expr.builder import to_func_expr
 from ...expr.visitor import DefaultExprVisitor, ExprVisitor
-from ...expr.utils import get_deep_names, require_argument
+from ...expr.utils import get_deep_names
 
 from .._common import NotSupportError, AlwaysEmptyError
 
@@ -44,11 +44,11 @@ class QueryOptionsRootExprVisitor(QueryOptionsExprVisitor):
 
     def visit_call_expr(self, expr: CallExpr) -> bool:
         func = expr.func.resolve_value()
-        if func is Queryable.where:
+        if func is LinqQuery.where:
             return self._apply_call_where(expr.args[1].value)
-        elif func is Queryable.skip:
+        elif func is LinqQuery.skip:
             return self._apply_call_skip(expr.args[1].value)
-        elif func is Queryable.take:
+        elif func is LinqQuery.take:
             return self._apply_call_take(expr.args[1].value)
         raise NotSupportError
 

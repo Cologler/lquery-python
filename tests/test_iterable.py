@@ -13,9 +13,9 @@ import itertools
 import pytest
 
 from lquery import enumerable
-from lquery.funcs import Queryable
+from lquery.funcs import LinqQuery
 
-def query1() -> Queryable:
+def query1() -> LinqQuery:
     return enumerable([
         {
             'name': 'x',
@@ -33,7 +33,7 @@ def query1() -> Queryable:
         },
     ])
 
-def query2() -> Queryable:
+def query2() -> LinqQuery:
     return enumerable([1, 2, 3, 4, 5, 6])
 
 

@@ -8,7 +8,7 @@
 import copy
 
 from ...queryable import AbstractQueryable, ReduceInfo
-from ...funcs import Queryable
+from ...funcs import LinqQuery
 from ...iterable import IterableQueryProvider
 from ...expr import Make
 from ...empty import EmptyQuery
@@ -57,7 +57,7 @@ class MongoDbQuery(NextMongoDbQuery):
 
 class MongoDbQueryProvider(IterableQueryProvider):
     def execute(self, expr):
-        if expr.func.resolve_value() in (Queryable.where, Queryable.skip, Queryable.take):
+        if expr.func.resolve_value() in (LinqQuery.where, LinqQuery.skip, LinqQuery.take):
             queryable = expr.args[0].value
             query_options = copy.deepcopy(queryable.query_options)
             visitor = QueryOptionsRootExprVisitor(query_options)
