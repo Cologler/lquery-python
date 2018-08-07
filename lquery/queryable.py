@@ -5,7 +5,8 @@
 #
 # ----------
 
-from functools import partial
+import types
+from functools import update_wrapper
 from abc import abstractmethod, abstractproperty
 from typing import Union, List, TypeVar
 from typing import Iterable as GenericIterable
@@ -57,7 +58,8 @@ class IQueryable(GenericIterable[T]):
         func = self._ENTENSION_METHODS.get(attr)
         if func is None:
             raise AttributeError(f'{type(self)} has no attribute or extension method \'{attr}\'')
-        return partial(func, self)
+        bound_method = types.MethodType(func, self)
+        return bound_method
 
     @classmethod
     def extend_linq(cls, return_queryable: bool, name: str = None):
@@ -73,7 +75,7 @@ class IQueryable(GenericIterable[T]):
                 allargs = [func, self, *args]
                 next_expr = Make.call(*[Make.ref(a) for a in allargs])
                 return self.provider.execute(next_expr)
-            IQueryable._ENTENSION_METHODS[method_name] = wraped_func
+            IQueryable._ENTENSION_METHODS[method_name] = update_wrapper(wraped_func, func)
             return func
         return _
 
