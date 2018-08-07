@@ -45,12 +45,48 @@ query: Queryable = MongoDbQuery(collection)
 
 ## linq APIs
 
-* `to_memory` - same as `AsEnumerable()` from C#
-* `where`
 * `select`
 * `select_many`
+* `group_by`
+* `where`
+* `of_type`
 * `take`
+* `take_while`
 * `skip`
+* `skip_while`
+* `distinct`
+* `order_by`
+* `order_by_descending`
+* `reverse`
+* `first`
+* `first_or_default`
+* `last`
+* `last_or_default`
+* `single`
+* `single_or_default`
+* `element_at`
+* `count`
+* `concat`
+* `difference`
+* `intersect`
+* `union`
+* `join`
+* `group_join`
+* `zip`
+* `zip_longest`
+* `min`
+* `max`
+* `sum`
+* `average`
+* `aggregate`
+* `any`
+* `all`
+* `contains`
+* `sequence_equal`
+* `to_list`
+* `to_dict`
+* `for_each`
+* `load` - **only for IQueryable**, same as `AsEnumerable()` from C#
 
 read more examples from unittests.
 
