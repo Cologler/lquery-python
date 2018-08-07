@@ -7,7 +7,7 @@
 
 import re
 
-from ...queryable_funcs import Queryable
+from ...funcs import Queryable
 from ...expr import (
     RequireArgumentError,
     BinaryExpr, IndexExpr, CallExpr, AttrExpr, UnaryExpr,

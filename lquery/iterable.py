@@ -12,8 +12,8 @@ from typeguard import typechecked
 
 from .expr import CallExpr, ValueExpr, Make
 from .queryable import AbstractQueryable, IQueryProvider, ReduceInfo
-# load queryable_funcs for all extensions
-from .queryable_funcs import _
+# load funcs for all extensions
+from .funcs import _
 
 
 class NextIterableQuery(AbstractQueryable):

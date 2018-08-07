@@ -13,7 +13,7 @@ import itertools
 import pytest
 
 from lquery import enumerable
-from lquery.queryable_funcs import Queryable
+from lquery.funcs import Queryable
 
 def query1() -> Queryable:
     return enumerable([

@@ -8,7 +8,7 @@
 import copy
 
 from ...queryable import AbstractQueryable, ReduceInfo
-from ...queryable_funcs import Queryable
+from ...funcs import Queryable
 from ...iterable import IterableQueryProvider
 from ...expr import Make
 from ...empty import EmptyQuery

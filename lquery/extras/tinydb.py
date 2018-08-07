@@ -6,7 +6,7 @@
 # ----------
 
 from ..queryable import AbstractQueryable
-from ..queryable_funcs import Queryable
+from ..funcs import Queryable
 from ..iterable import IterableQueryProvider
 from ..expr import Make
 from ..expr.builder import to_func_expr
