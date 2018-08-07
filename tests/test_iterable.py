@@ -240,8 +240,7 @@ def test_method_sequence_equal():
     pass
 
 def test_method_to_list():
-    query = query1().where(lambda x: 'spec-key' in x)
-    assert query.to_list() == list(query)
+    assert query1().to_list() == list(query1())
 
 def test_method_to_dict():
     pass

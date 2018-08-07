@@ -22,3 +22,4 @@ class Extendable:
     @classmethod
     def _extend(cls, name, func):
         cls._ENTENSION_METHODS.setdefault(cls, {})[name] = func
+        return func

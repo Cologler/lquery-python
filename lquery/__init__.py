@@ -5,10 +5,11 @@
 #
 # ----------
 
+from collections.abc import Iterable
 from typing import Any
 
-from .iterable import Iterable, IterableQuery
+from .enumerable import Enumerable
 
 # pylint: disable=C0103
 def enumerable(items: Iterable) -> Any:
-    return IterableQuery(items)
+    return Enumerable(items)
