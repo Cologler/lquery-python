@@ -5,8 +5,8 @@
 # lquery for tinydb
 # ----------
 
-from ..func import where
 from ..queryable import Queryable
+from ..queryable_funcs import where
 from ..iterable import IterableQueryProvider
 from ..expr import Make
 from ..expr.builder import to_func_expr

@@ -7,7 +7,7 @@
 
 import re
 
-from ...func import where, skip, take
+from ...queryable_funcs import where, skip, take
 from ...expr import (
     RequireArgumentError,
     BinaryExpr, IndexExpr, CallExpr, AttrExpr, UnaryExpr,

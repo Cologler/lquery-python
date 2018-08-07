@@ -12,6 +12,8 @@ from typeguard import typechecked
 
 from .expr import CallExpr, ValueExpr, Make
 from .queryable import Queryable, IQueryProvider, ReduceInfo
+# load queryable_funcs for all extensions
+from .queryable_funcs import _
 
 def get_result(expr):
     if type(expr) is CallExpr:
@@ -49,6 +51,7 @@ class IterableQuery(NextIterableQuery):
 class IterableQueryProvider(IQueryProvider):
     def execute(self, expr: Union[ValueExpr, CallExpr]):
         if isinstance(expr, CallExpr):
+            print(expr.func.resolve_value(), expr.func.resolve_value().return_queryable)
             if not expr.func.resolve_value().return_queryable:
                 return get_result(expr)
         return NextIterableQuery(expr)

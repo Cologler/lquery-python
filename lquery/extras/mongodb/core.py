@@ -7,8 +7,8 @@
 
 import copy
 
-from ...func import where, skip, take
 from ...queryable import Queryable, ReduceInfo
+from ...queryable_funcs import where, skip, take
 from ...iterable import IterableQueryProvider
 from ...expr import Make
 from ...empty import EmptyQuery

@@ -5,68 +5,77 @@
 #
 # ----------
 
+from functools import partial
 from abc import abstractmethod, abstractproperty
-from typing import Optional, Union, List, TypeVar, Callable, Dict, Set
+from typing import Union, List, TypeVar
 from typing import Iterable as GenericIterable
 from collections import namedtuple
-from collections.abc import Iterable
-import operator
 
 from typeguard import typechecked
-from asq import query as Q
-from asq.selectors import identity
-from asq.namedelements import IndexedElement, KeyedElement
 
 from .expr import Make, CallExpr, ValueExpr
-from .func import (
-    # not in ASQ
-    to_memory,
-    # transforms
-    select, select_with_index, select_with_correspondence,
-    select_many, select_many_with_index, select_many_with_correspondence,
-    group_by,
-    # filter
-    where, of_type, take, take_while, skip, skip_while, distinct,
-    # sort
-    order_by, order_by_descending, reverse,
-    # get one elements
-    default_if_empty, first, first_or_default, last, last_or_default,
-    single, single_or_default, element_at,
-    # get queryable props
-    count,
-    # two collection operations
-    concat, difference, intersect, union, join, group_join, zip,
-    # for numbers
-    min, max,
-    # aggregates
-    sum, average, aggregate,
-    # logic operations
-    any, all, contains, sequence_equal,
-)
 
 # element
 T = TypeVar('T')
-# element of other collection
-T2 = TypeVar('T2')
-# result selector
-TR = TypeVar('TR')
-# key selector
-TK = TypeVar('TK')
-# value selector
-TV = TypeVar('TV')
+
+
+class IQueryProvider:
+
+    '''
+    interface of `QueryProvider`
+    '''
+    @abstractmethod
+    def execute(self, expr: Union[ValueExpr, CallExpr]):
+        '''
+        return a `IQueryable` or a value by `expr`.
+
+        for example, if the `expr.func.resolve_value()` is `count`, return value should be a number.
+        '''
+        raise NotImplementedError
 
 
 class IQueryable(GenericIterable[T]):
     '''
     interface of `Queryable`
     '''
+
     @abstractproperty
     def expr(self) -> Union[ValueExpr, CallExpr]:
+        raise NotImplementedError
+
+    @abstractproperty
+    def provider(self) -> IQueryProvider:
         raise NotImplementedError
 
     @abstractmethod
     def __iter__(self):
         raise NotImplementedError('you should implement the query in subclass.')
+
+    _ENTENSION_METHODS: dict = {}
+
+    def __getattr__(self, attr):
+        func = self._ENTENSION_METHODS.get(attr)
+        if func is None:
+            raise AttributeError(f'{type(self)} has no attribute or extension method \'{attr}\'')
+        return partial(func, self)
+
+    @classmethod
+    def extend_linq(cls, return_queryable: bool, name: str = None):
+        '''
+        allow user add extension methods for `IQueryable`.
+
+        method will be wrap as `CallExpr`.
+        '''
+        def _(func):
+            func.return_queryable = bool(return_queryable)
+            method_name = name or func.__name__
+            def wraped_func(self, *args):
+                allargs = [func, self, *args]
+                next_expr = Make.call(*[Make.ref(a) for a in allargs])
+                return self.provider.execute(next_expr)
+            IQueryable._ENTENSION_METHODS[method_name] = wraped_func
+            return func
+        return _
 
 
 ReduceInfoNode = namedtuple('ReduceInfoNode', ['type', 'expr'])
@@ -129,21 +138,6 @@ class ReduceInfo:
         print(f'reduce info of:\n  {self.querable}\n=>\n{reduce_info_str}')
 
 
-class IQueryProvider:
-
-    '''
-    interface of `QueryProvider`
-    '''
-    @abstractmethod
-    def execute(self, expr: Union[ValueExpr, CallExpr]):
-        '''
-        return a `IQueryable` or a value by `expr`.
-
-        for example, if the `expr.func.resolve_value()` is `count`, return value should be a number.
-        '''
-        raise NotImplementedError
-
-
 class Queryable(IQueryable):
     @typechecked
     def __init__(self, expr: Union[ValueExpr, CallExpr], provider: IQueryProvider):
@@ -153,6 +147,10 @@ class Queryable(IQueryable):
     @property
     def expr(self):
         return self._expr
+
+    @property
+    def provider(self) -> IQueryProvider:
+        return self._provider
 
     def __str__(self):
         expr = self.expr
@@ -166,11 +164,6 @@ class Queryable(IQueryable):
             lines.append(expr.to_str(is_method=True))
         return '\n    .'.join(lines)
 
-    def _then(self, func, *args):
-        allargs = [func, self, *args]
-        next_expr = Make.call(*[Make.ref(a) for a in allargs])
-        return self._provider.execute(next_expr)
-
     def get_reduce_info(self):
         '''
         print reduce info in console.
@@ -183,241 +176,6 @@ class Queryable(IQueryable):
 
     def update_reduce_info(self, reduce_info: ReduceInfo):
         pass
-
-    # not in ASQ
-
-    def to_memory(self):
-        '''
-        force iter in memory.
-        '''
-        return self._then(to_memory)
-
-    # transforms
-
-    @typechecked
-    def select(self, selector: Callable[[T], TR]):
-        return self._then(select, selector)
-
-    @typechecked
-    def select_with_index(self, selector: callable=IndexedElement, transform: Callable[[T], TR] = identity):
-        return self._then(select_with_index, selector, transform)
-
-    @typechecked
-    def select_with_correspondence(self, selector: callable,
-                                   result_selector: callable=KeyedElement):
-        return self._then(select_with_correspondence, selector, result_selector)
-
-    @typechecked
-    def select_many(self,
-                    collection_selector: Callable[[T], TR] = identity,
-                    result_selector: Callable[[T], TR] = identity):
-        return self._then(select_many, collection_selector, result_selector)
-
-    @typechecked
-    def select_many_with_index(self, collection_selector: callable = IndexedElement,
-                               result_selector: callable = lambda source_element, collection_element: collection_element):
-        return self._then(select_many_with_index, collection_selector, result_selector)
-
-    @typechecked
-    def select_many_with_correspondence(self,
-                                        collection_selector: Callable[[T], TR] = identity,
-                                        result_selector: callable = KeyedElement):
-        return self._then(select_many_with_correspondence, collection_selector, result_selector)
-
-    @typechecked
-    def group_by(self, key_selector: Callable[[T], TR] = identity, element_selector: Callable[[T], TR] = identity,
-                 result_selector: callable=lambda key, grouping: grouping):
-        return self._then(group_by, key_selector, element_selector, result_selector)
-
-    # filter
-
-    @typechecked
-    def where(self, predicate: Callable[[T], bool]):
-        '''
-        Filters elements according to whether they match a predicate.
-        '''
-        return self._then(where, predicate)
-
-    @typechecked
-    def of_type(self, type_: type):
-        '''
-        Filters elements according to whether they are of a certain type.
-        '''
-        return self._then(of_type, type_)
-
-    @typechecked
-    def take(self, count_: int):
-        return self._then(take, count_)
-
-    @typechecked
-    def take_while(self, predicate: Callable[[T], bool]):
-        return self._then(take_while, predicate)
-
-    @typechecked
-    def skip(self, count_: int):
-        return self._then(skip, count_)
-
-    @typechecked
-    def skip_while(self, predicate: Callable[[T], bool]):
-        return self._then(skip_while, predicate)
-
-    @typechecked
-    def distinct(self, selector: Callable[[T], TR] = identity):
-        return self._then(distinct, selector)
-
-    # sort
-
-    @typechecked
-    def order_by(self, key_selector: Callable[[T], TR] = identity):
-        return self._then(order_by, key_selector)
-
-    @typechecked
-    def order_by_descending(self, key_selector: Callable[[T], TR] = identity):
-        return self._then(order_by_descending, key_selector)
-
-    def reverse(self):
-        return self._then(reverse)
-
-    # get one element
-
-    def default_if_empty(self, default):
-        return self._then(default_if_empty, default)
-
-    @typechecked
-    def first(self, predicate: Callable[[T], bool] = None):
-        return self._then(first, predicate)
-
-    @typechecked
-    def first_or_default(self, default, predicate: Callable[[T], bool] = None):
-        return self._then(first_or_default, default, predicate)
-
-    @typechecked
-    def last(self, predicate: Callable[[T], bool] = None):
-        return self._then(last, predicate)
-
-    @typechecked
-    def last_or_default(self, default, predicate: Callable[[T], bool] = None):
-        return self._then(last_or_default, default, predicate)
-
-    @typechecked
-    def single(self, predicate: Callable[[T], bool] = None):
-        return self._then(single, predicate)
-
-    @typechecked
-    def single_or_default(self, default, predicate: Callable[[T], bool] = None):
-        return self._then(single_or_default, default, predicate)
-
-    @typechecked
-    def element_at(self, index: int):
-        return self._then(element_at, index)
-
-    # get queryable props
-
-    @typechecked
-    def count(self, predicate: Callable[[T], bool] = None) -> int:
-        return self._then(count, predicate)
-
-    # two collection operations
-
-    @typechecked
-    def concat(self, other: Iterable):
-        return self._then(concat, other)
-
-    @typechecked
-    def difference(self, other: Iterable, selector=identity):
-        return self._then(difference, other, selector)
-
-    @typechecked
-    def intersect(self, other: Iterable, selector=identity):
-        return self._then(intersect, other, selector)
-
-    @typechecked
-    def union(self, other: Iterable, selector=identity):
-        return self._then(union, other, selector)
-
-    @typechecked
-    def join(self, inner_iterable: Iterable,
-             outer_key_selector: callable = identity,
-             inner_key_selector: callable = identity,
-             result_selector: callable=lambda outer, inner: (outer, inner)):
-        return self._then(join, inner_iterable,
-                          outer_key_selector, inner_key_selector, result_selector)
-
-    @typechecked
-    def group_join(self, inner_iterable: Iterable,
-                   outer_key_selector: callable = identity,
-                   inner_key_selector: callable = identity,
-                   result_selector: callable=lambda outer, grouping: grouping):
-        return self._then(group_join, inner_iterable,
-                          outer_key_selector, inner_key_selector, result_selector)
-
-    @typechecked
-    def zip(self, other: GenericIterable[T2],
-            result_selector: Callable[[T, T2], TR] = lambda x, y: (x, y)):
-        return self._then(zip, other, result_selector)
-
-    # for numbers
-
-    @typechecked
-    def min(self, selector: Callable[[T], TR] = identity) -> TR:
-        return self._then(min, selector)
-
-    @typechecked
-    def max(self, selector: Callable[[T], TR] = identity) -> TR:
-        return self._then(max, selector)
-
-    # aggregates
-
-    @typechecked
-    def sum(self, selector: Callable[[T], TR] = identity) -> TR:
-        return self._then(sum, selector)
-
-    @typechecked
-    def average(self, selector: Callable[[T], TR] = identity) -> TR:
-        return self._then(average, selector)
-
-    @typechecked
-    def aggregate(self, reducer: callable, seed, result_selector: Callable[[T], TR] = identity):
-        return self._then(aggregate, reducer, seed, result_selector)
-
-    # logic operations
-
-    @typechecked
-    def any(self, predicate: Callable[[T], bool] = None) -> bool:
-        return self._then(any, predicate)
-
-    @typechecked
-    def all(self, predicate: Callable[[T], bool] = bool) -> bool:
-        return self._then(all, predicate)
-
-    @typechecked
-    def contains(self, value: T, equality_comparer: Callable[[T, T], bool] = operator.eq) -> bool:
-        return self._then(contains, value, equality_comparer)
-
-    @typechecked
-    def sequence_equal(self, other: GenericIterable[T],
-                       equality_comparer: Callable[[T, T], bool]=operator.eq) -> bool:
-        return self._then(sequence_equal, other, equality_comparer)
-
-    # get iter result
-
-    def to_list(self) -> List[T]:
-        return list(self)
-
-    def to_tuple(self) -> tuple:
-        return tuple(self)
-
-    def to_set(self) -> Set[T]:
-        return Q(self).to_set()
-
-    def to_dict(self,
-                key_selector: Callable[[T], TK] = identity,
-                value_selector: Callable[[T], TV] = identity) -> Dict[TK, TV]:
-        return Q(self).to_dictionary(key_selector, value_selector)
-
-    def each(self, action: Callable[[T], None]) -> None:
-        for item in self:
-            action(item)
 
 
 def get_queryables(expr):
