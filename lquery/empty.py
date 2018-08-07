@@ -44,9 +44,7 @@ class EmptyQuery(AbstractQueryable):
 
 
 class EmptyQueryProvider(IterableQueryProvider):
-    def execute(self, expr):
-        if not expr.func.resolve_value().return_queryable:
-            return super().execute(expr)
+    def create_query(self, expr):
         return EmptyQuery(expr, get_prev_queryable(expr).reason)
 
 

@@ -24,11 +24,9 @@ class TinyDbQuery(AbstractQueryable):
 
 
 class TinyDbQueryProvider(IterableQueryProvider):
-    def execute(self, expr):
-        if not expr.func.resolve_value().return_queryable:
-            return super().execute(expr)
+    def create_query(self, expr):
         expr = self._get_rewrited_call_expr(expr) or expr
-        return super().execute(expr)
+        return super().create_query(expr)
 
     def _get_rewrited_call_expr(self, call_expr):
         func = call_expr.func.resolve_value()

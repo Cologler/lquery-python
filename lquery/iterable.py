@@ -40,10 +40,10 @@ class IterableQuery(NextIterableQuery):
 
 
 class IterableQueryProvider(IQueryProvider):
-    def execute(self, expr: Union[ValueExpr, CallExpr]):
-        if isinstance(expr, CallExpr):
-            if not expr.func.resolve_value().return_queryable:
-                return expr.resolve_value()
+    def create_query(self, expr: CallExpr):
         return NextIterableQuery(expr)
+
+    def execute(self, expr: Union[ValueExpr, CallExpr]):
+        return expr.resolve_value()
 
 PROVIDER = IterableQueryProvider()

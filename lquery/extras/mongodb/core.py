@@ -56,7 +56,7 @@ class MongoDbQuery(NextMongoDbQuery):
 
 
 class MongoDbQueryProvider(IterableQueryProvider):
-    def execute(self, expr):
+    def create_query(self, expr):
         if expr.func.resolve_value() in (LinqQuery.where, LinqQuery.skip, LinqQuery.take):
             queryable = expr.args[0].value
             query_options = copy.deepcopy(queryable.query_options)
@@ -68,16 +68,7 @@ class MongoDbQueryProvider(IterableQueryProvider):
                 return EmptyQuery(expr, always_empty.reason)
             except NotSupportError:
                 pass
-        return super().execute(expr)
+        return super().create_query(expr)
 
 
 PROVIDER = MongoDbQueryProvider()
-
-
-
-
-
-
-
-
-

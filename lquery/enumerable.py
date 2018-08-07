@@ -21,18 +21,14 @@ class IEnumerable(Extendable):
     @classmethod
     def extend_linq(cls, return_queryable: bool, name: str = None):
         '''
-        allow user add extension methods for `IQueryable`.
-
-        method will be wrap as `CallExpr`.
+        allow user add extension methods for `IEnumerable`.
         '''
         def _(func):
             method_name = name or func.__name__
             @wraps(func)
             def wraped_func(self, *args, **kwargs):
                 ret = func(self, *args, **kwargs)
-                if return_queryable:
-                    ret = Enumerable(ret)
-                return ret
+                return Enumerable(ret) if return_queryable else ret
             cls._extend(method_name, wraped_func)
             return func
         return _

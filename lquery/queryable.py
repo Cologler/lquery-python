@@ -17,16 +17,25 @@ from .extendable import Extendable
 
 
 class IQueryProvider:
-
     '''
     interface of `QueryProvider`
     '''
-    @abstractmethod
-    def execute(self, expr: Union[ValueExpr, CallExpr]):
-        '''
-        return a `IQueryable` or a value by `expr`.
 
-        for example, if the `expr.func.resolve_value()` is `count`, return value should be a number.
+    @abstractmethod
+    def create_query(self, expr: CallExpr):
+        '''
+        create query base on expr.
+
+        return a `IQueryable`.
+        '''
+        raise NotImplementedError
+
+    @abstractmethod
+    def execute(self, expr: CallExpr):
+        '''
+        execute query base on expr.
+
+        return a a value by `expr`.
         '''
         raise NotImplementedError
 
@@ -56,9 +65,6 @@ class IQueryable(Extendable):
         method will be wrap as `CallExpr`.
         '''
         def _(func):
-            # set the `return_queryable`
-            func.return_queryable = bool(return_queryable)
-
             method_name = name or func.__name__
             @wrap_fast_fail(func)
             def wraped_func(self, *args, **kwargs):
@@ -67,7 +73,10 @@ class IQueryable(Extendable):
                 args_expr = [Make.ref(a) for a in call_args]
                 kwargs_expr = dict([(k, Make.ref(v)) for k, v in kwargs.items()])
                 next_expr = Make.call(*args_expr, **kwargs_expr)
-                return self.provider.execute(next_expr)
+                if return_queryable:
+                    return self.provider.create_query(next_expr)
+                else:
+                    return self.provider.execute(next_expr)
             cls._extend(method_name, wraped_func)
             return func
         return _
