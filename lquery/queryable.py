@@ -5,21 +5,15 @@
 #
 # ----------
 
-import types
-import functools
-import inspect
 from abc import abstractmethod, abstractproperty
-from typing import Union, List, TypeVar
-from typing import Iterable as GenericIterable
+from typing import Union, List
 from collections import namedtuple
 
 from typeguard import typechecked
 
 from .expr import Make, CallExpr, ValueExpr
 from .utils import wrap_fast_fail
-
-# element
-T = TypeVar('T')
+from .extendable import Extendable
 
 
 class IQueryProvider:
@@ -37,7 +31,7 @@ class IQueryProvider:
         raise NotImplementedError
 
 
-class IQueryable(GenericIterable[T]):
+class IQueryable(Extendable):
     '''
     interface of `Queryable`
     '''
@@ -53,15 +47,6 @@ class IQueryable(GenericIterable[T]):
     @abstractmethod
     def __iter__(self):
         raise NotImplementedError('you should implement the query in subclass.')
-
-    _ENTENSION_METHODS: dict = {}
-
-    def __getattr__(self, attr):
-        func = self._ENTENSION_METHODS.get(attr)
-        if func is None:
-            raise AttributeError(f'{type(self)} has no attribute or extension method \'{attr}\'')
-        bound_method = types.MethodType(func, self)
-        return bound_method
 
     @classmethod
     def extend_linq(cls, return_queryable: bool, name: str = None):
@@ -83,7 +68,7 @@ class IQueryable(GenericIterable[T]):
                 kwargs_expr = dict([(k, Make.ref(v)) for k, v in kwargs.items()])
                 next_expr = Make.call(*args_expr, **kwargs_expr)
                 return self.provider.execute(next_expr)
-            IQueryable._ENTENSION_METHODS[method_name] = wraped_func
+            cls._extend(method_name, wraped_func)
             return func
         return _
 
