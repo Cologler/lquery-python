@@ -45,3 +45,9 @@ class Enumerable(IEnumerable):
 
     def __iter__(self):
         return iter(self._items)
+
+    def __getitem__(self, k):
+        try:
+            return self._items[k]
+        except KeyError: # raise on dict.
+            raise TypeError
