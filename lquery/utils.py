@@ -26,10 +26,8 @@ def wrap_fast_fail(func):
         @functools.wraps(func)
         def fast_fail_func(*args, **kwargs):
             # for fast fail
-            args_map_copy = args_map.copy()
-            for k in kwargs:
-                args_map_copy.pop(k)
-            if any(v is None for v in args_map_copy.values()) or len(args) < len(args_map_copy):
+            req_args = dict((k, args_map[k]) for k in args_map if k not in kwargs)
+            if any(v is None for v in req_args.values()) or len(args) < len(req_args):
                 return func(*args, **kwargs)
             return wraped_func(*args, **kwargs)
         return fast_fail_func

@@ -8,6 +8,7 @@
 import sys
 import traceback
 import unittest
+import itertools
 
 import pytest
 
@@ -138,12 +139,40 @@ def test_method_zip():
     src_3 = [3, 4, 5]
     src_4 = ['fds', 'uy']
 
-    with pytest.raises(TypeError):
-        enumerable(src_1).zip()
+    query = enumerable(src_1)
 
-    assert enumerable(src_1).zip(src_2).to_list() == list(zip(src_1, src_2))
-    assert enumerable(src_1).zip(src_2, src_3).to_list() == list(zip(src_1, src_2, src_3))
-    assert enumerable(src_1).zip(src_2, src_3, src_4).to_list() == list(zip(src_1, src_2, src_3, src_4))
+    with pytest.raises(TypeError):
+        query.zip()
+
+    assert query.zip(src_2).to_list() == list(zip(src_1, src_2))
+    assert query.zip(src_2, src_3).to_list() == list(zip(src_1, src_2, src_3))
+    assert query.zip(src_2, src_3, src_4).to_list() == list(zip(src_1, src_2, src_3, src_4))
+
+def test_method_zip_longest():
+    src_1 = [2, 5, 7, 'f']
+    src_2 = ['f', 8, 49, 'fgg']
+    src_3 = [3, 4, 5]
+    src_4 = ['fds', 'uy']
+
+    with pytest.raises(TypeError):
+        enumerable(src_1).zip_longest()
+
+    with pytest.raises(TypeError):
+        enumerable(src_1).zip_longest(fill_value=None)
+
+    assert enumerable(src_1).zip_longest(src_2).to_list() ==\
+        list(itertools.zip_longest(src_1, src_2, fillvalue=None))
+    assert enumerable(src_1).zip_longest(src_2, src_3).to_list() ==\
+        list(itertools.zip_longest(src_1, src_2, src_3, fillvalue=None))
+    assert enumerable(src_1).zip_longest(src_2, src_3, src_4).to_list() ==\
+        list(itertools.zip_longest(src_1, src_2, src_3, src_4, fillvalue=None))
+
+    assert enumerable(src_1).zip_longest(src_2, fill_value=8).to_list() ==\
+        list(itertools.zip_longest(src_1, src_2, fillvalue=8))
+    assert enumerable(src_1).zip_longest(src_2, src_3, fill_value=8).to_list() ==\
+        list(itertools.zip_longest(src_1, src_2, src_3, fillvalue=8))
+    assert enumerable(src_1).zip_longest(src_2, src_3, src_4, fill_value=8).to_list() ==\
+        list(itertools.zip_longest(src_1, src_2, src_3, src_4, fillvalue=8))
 
 def test_method_min():
     items = [1, 8, 15]

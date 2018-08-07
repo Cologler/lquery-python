@@ -15,22 +15,13 @@ from .queryable import AbstractQueryable, IQueryProvider, ReduceInfo
 # load queryable_funcs for all extensions
 from .queryable_funcs import _
 
-def get_result(expr):
-    if type(expr) is CallExpr:
-        args = [get_result(e) for e in expr.args]
-        func = expr.func.resolve_value()
-        assert expr.args and not expr.kwargs
-        return func(*args)
-    else:
-        return expr.value
-
 
 class NextIterableQuery(AbstractQueryable):
     def __init__(self, expr):
         super().__init__(expr, PROVIDER)
 
     def __iter__(self):
-        return iter(get_result(self.expr))
+        return iter(self.expr.resolve_value())
 
     def update_reduce_info(self, reduce_info):
         reduce_info.add_node(ReduceInfo.TYPE_MEMORY, self.expr)
@@ -52,7 +43,7 @@ class IterableQueryProvider(IQueryProvider):
     def execute(self, expr: Union[ValueExpr, CallExpr]):
         if isinstance(expr, CallExpr):
             if not expr.func.resolve_value().return_queryable:
-                return get_result(expr)
+                return expr.resolve_value()
         return NextIterableQuery(expr)
 
 PROVIDER = IterableQueryProvider()

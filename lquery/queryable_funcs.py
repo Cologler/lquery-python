@@ -201,11 +201,13 @@ class Queryable:
                 result_selector=lambda outer, grouping: grouping):
         return query(self).group_join(inner_iterable, outer_key_selector, inner_key_selector, result_selector)
 
-
-
     @IQueryable.extend_linq(True)
     def zip(self, second, *others):
         return zip(self, second, *others)
+
+    @IQueryable.extend_linq(True)
+    def zip_longest(self, second, *others, fill_value=None):
+        return itertools.zip_longest(self, second, *others, fillvalue=fill_value)
 
     # for numbers
 
