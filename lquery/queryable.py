@@ -6,7 +6,7 @@
 # ----------
 
 import types
-from functools import update_wrapper
+from functools import update_wrapper, wraps
 from abc import abstractmethod, abstractproperty
 from typing import Union, List, TypeVar
 from typing import Iterable as GenericIterable
@@ -69,13 +69,15 @@ class IQueryable(GenericIterable[T]):
         method will be wrap as `CallExpr`.
         '''
         def _(func):
+            # set the `return_queryable`
             func.return_queryable = bool(return_queryable)
             method_name = name or func.__name__
-            def wraped_func(self, *args):
-                allargs = [func, self, *args]
+            @wraps(func)
+            def wraped_func(self, *args, **kwargs):
+                allargs = [func, self] + [*args]
                 next_expr = Make.call(*[Make.ref(a) for a in allargs])
                 return self.provider.execute(next_expr)
-            IQueryable._ENTENSION_METHODS[method_name] = update_wrapper(wraped_func, func)
+            IQueryable._ENTENSION_METHODS[method_name] = wraped_func
             return func
         return _
 

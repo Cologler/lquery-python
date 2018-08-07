@@ -6,6 +6,7 @@
 # ----------
 
 from typing import Callable, Set, Dict, List, TypeVar
+import operator
 
 from asq import query
 from asq.selectors import identity
@@ -39,28 +40,33 @@ def select(src, selector):
     return query(src).select(selector)
 
 @IQueryable.extend_linq(True)
-def select_with_index(src, *args):
-    return query(src).select_with_index(*args)
+def select_with_index(src, selector=IndexedElement, transform=identity):
+    return query(src).select_with_index(selector, transform)
 
 @IQueryable.extend_linq(True)
-def select_with_correspondence(src, selector, *args):
-    return query(src).select_with_correspondence(selector, *args)
+def select_with_correspondence(src, selector, result_selector=KeyedElement):
+    return query(src).select_with_correspondence(selector, result_selector)
 
 @IQueryable.extend_linq(True)
-def select_many(src, *args):
-    return query(src).select_many(*args)
+def select_many(src, collection_selector=identity, result_selector=identity):
+    return query(src).select_many(collection_selector, result_selector)
 
 @IQueryable.extend_linq(True)
-def select_many_with_index(src, *args):
-    return query(src).select_many_with_index(*args)
+def select_many_with_index(src,
+        collection_selector=IndexedElement,
+        result_selector=lambda source_element, collection_element: collection_element):
+    return query(src).select_many_with_index(collection_selector, result_selector)
 
 @IQueryable.extend_linq(True)
-def select_many_with_correspondence(src, *args):
-    return query(src).select_many_with_correspondence(*args)
+def select_many_with_correspondence(src,
+        collection_selector=identity,
+        result_selector=KeyedElement):
+    return query(src).select_many_with_correspondence(collection_selector, result_selector)
 
 @IQueryable.extend_linq(True)
-def group_by(src, *args):
-    return query(src).group_by(*args)
+def group_by(src, key_selector=identity, element_selector=identity,
+             result_selector=lambda key, grouping: grouping):
+    return query(src).group_by(key_selector, element_selector, result_selector)
 
 # filter
 
@@ -73,34 +79,34 @@ def of_type(src, classinfo):
     return query(src).of_type(classinfo)
 
 @IQueryable.extend_linq(True)
-def take(src, *args):
-    return query(src).take(*args)
+def take(src, count_=1):
+    return query(src).take(count_)
 
 @IQueryable.extend_linq(True)
 def take_while(src, predicate):
     return query(src).take_while(predicate)
 
 @IQueryable.extend_linq(True)
-def skip(src, *args):
-    return query(src).skip(*args)
+def skip(src, count_=1):
+    return query(src).skip(count_)
 
 @IQueryable.extend_linq(True)
 def skip_while(src, predicate):
     return query(src).skip_while(predicate)
 
 @IQueryable.extend_linq(True)
-def distinct(src, *args):
-    return query(src).distinct(*args)
+def distinct(src, selector=identity):
+    return query(src).distinct(selector)
 
 # sort
 
 @IQueryable.extend_linq(True)
-def order_by(src, *args):
-    return query(src).order_by(*args)
+def order_by(src, key_selector=identity):
+    return query(src).order_by(key_selector)
 
 @IQueryable.extend_linq(True)
-def order_by_descending(src, *args):
-    return query(src).order_by_descending(*args)
+def order_by_descending(src, key_selector=identity):
+    return query(src).order_by_descending(key_selector)
 
 @IQueryable.extend_linq(True)
 def reverse(src):
@@ -113,28 +119,28 @@ def default_if_empty(src, default):
     return query(src).default_if_empty(default)
 
 @IQueryable.extend_linq(False)
-def first(src, *args):
-    return query(src).first(*args)
+def first(src, predicate=None):
+    return query(src).first(predicate)
 
 @IQueryable.extend_linq(False)
-def first_or_default(src, default, *args):
-    return query(src).first_or_default(default, *args)
+def first_or_default(src, default, predicate=None):
+    return query(src).first_or_default(default, predicate)
 
 @IQueryable.extend_linq(False)
-def last(src, *args):
-    return query(src).last(*args)
+def last(src, predicate=None):
+    return query(src).last(predicate)
 
 @IQueryable.extend_linq(False)
-def last_or_default(src, default, *args):
-    return query(src).last_or_default(default, *args)
+def last_or_default(src, default, predicate=None):
+    return query(src).last_or_default(default, predicate)
 
 @IQueryable.extend_linq(False)
-def single(src, *args):
-    return query(src).single(*args)
+def single(src, predicate=None):
+    return query(src).single(predicate)
 
 @IQueryable.extend_linq(False)
-def single_or_default(src, default, *args):
-    return query(src).single_or_default(default, *args)
+def single_or_default(src, default, predicate=None):
+    return query(src).single_or_default(default, predicate)
 
 @IQueryable.extend_linq(False)
 def element_at(src, index):
@@ -143,8 +149,8 @@ def element_at(src, index):
 # get queryable props
 
 @IQueryable.extend_linq(False)
-def count(src, *args):
-    return query(src).count(*args)
+def count(src, predicate=None):
+    return query(src).count(predicate)
 
 # two collection operations
 
@@ -153,70 +159,77 @@ def concat(src, other):
     return query(src).concat(other)
 
 @IQueryable.extend_linq(True)
-def difference(src, other, *args):
-    return query(src).difference(other, *args)
+def difference(src, other, selector=identity):
+    return query(src).difference(other, selector)
 
 @IQueryable.extend_linq(True)
-def intersect(src, other, *args):
-    return query(src).intersect(other, *args)
+def intersect(src, other, selector=identity):
+    return query(src).intersect(other, selector)
 
 @IQueryable.extend_linq(True)
-def union(src, other, *args):
-    return query(src).union(other, *args)
+def union(src, other, selector=identity):
+    return query(src).union(other, selector)
 
 @IQueryable.extend_linq(True)
-def join(src, inner_iterable, *args):
-    return query(src).join(inner_iterable, *args)
+def join(src, inner_iterable,
+         outer_key_selector=identity,
+         inner_key_selector=identity,
+         result_selector=lambda outer, inner: (outer, inner)):
+    return query(src).join(inner_iterable, outer_key_selector, inner_key_selector, result_selector)
 
 @IQueryable.extend_linq(True)
-def group_join(src, inner_iterable, *args):
-    return query(src).group_join(inner_iterable, *args)
+def group_join(src,
+               inner_iterable,
+               outer_key_selector=identity,
+               inner_key_selector=identity,
+               result_selector=lambda outer, grouping: grouping):
+    return query(src).group_join(inner_iterable, outer_key_selector, inner_key_selector, result_selector)
 
 @IQueryable.extend_linq(True)
-def zip(src, other, *args):
-    return query(src).zip(other, *args)
+def zip(src, other, result_selector=lambda x, y: (x, y)):
+    return query(src).zip(other, result_selector)
 
 # for numbers
 
 @IQueryable.extend_linq(False)
-def min(src, *args):
-    return query(src).min(*args)
+def min(src, selector=identity):
+    return query(src).min(selector)
 
 @IQueryable.extend_linq(False)
-def max(src, *args):
-    return query(src).max(*args)
+def max(src, selector=identity):
+    return query(src).max(selector)
 
 # aggregates
 
 @IQueryable.extend_linq(False)
-def sum(src, *args):
-    return query(src).sum(*args)
+def sum(src, selector=identity):
+    return query(src).sum(selector)
 
 @IQueryable.extend_linq(False)
-def average(src, *args):
-    return query(src).average(*args)
+def average(src, selector=identity):
+    return query(src).average(selector)
 
 @IQueryable.extend_linq(False)
-def aggregate(src, reducer, seed, result_selector):
+def aggregate(src, reducer, seed, result_selector=identity):
     return query(src).aggregate(reducer, seed, result_selector)
 
 # logic operations
 
 @IQueryable.extend_linq(False)
-def any(src, *args):
-    return query(src).any(*args)
+def any(src, predicate=None):
+    return query(src).any(predicate)
 
 @IQueryable.extend_linq(False)
-def all(src, *args):
-    return query(src).all(*args)
+def all(src, predicate=bool):
+    return query(src).all(predicate)
 
 @IQueryable.extend_linq(False)
-def contains(src, value, *args):
-    return query(src).contains(value, *args)
+def contains(src, value, comparer=operator.eq):
+    return query(src).contains(value, comparer)
 
 @IQueryable.extend_linq(False)
-def sequence_equal(src, other, *args):
-    return query(src).sequence_equal(other, *args)
+def sequence_equal(src, other, comparer=operator.eq):
+    return query(src).sequence_equal(other, comparer)
 
 # get iter result
 
@@ -239,7 +252,7 @@ def to_dict(self,
     return query(self).to_dictionary(key_selector, value_selector)
 
 @IQueryable.extend_linq(False)
-def each(self, action: Callable[[T], None]) -> None:
+def for_each(self, action: Callable[[T], None]) -> None:
     for item in self:
         action(item)
 

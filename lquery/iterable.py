@@ -51,7 +51,6 @@ class IterableQuery(NextIterableQuery):
 class IterableQueryProvider(IQueryProvider):
     def execute(self, expr: Union[ValueExpr, CallExpr]):
         if isinstance(expr, CallExpr):
-            print(expr.func.resolve_value(), expr.func.resolve_value().return_queryable)
             if not expr.func.resolve_value().return_queryable:
                 return get_result(expr)
         return NextIterableQuery(expr)
