@@ -53,13 +53,6 @@ class LinqQuery:
         # added this method so linter will not show error.
         raise NotImplementedError
 
-    @extend_linq(True)
-    def load(self) -> Any:
-        '''
-        force load data into memory.
-        '''
-        return self
-
     # transforms
 
     @extend_linq(True)
@@ -283,5 +276,5 @@ class LinqQuery:
         for item in self:
             action(item)
 
-# for load outside:
+# for load from outside:
 _ = None

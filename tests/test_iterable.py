@@ -36,11 +36,6 @@ def query1() -> LinqQuery:
 def query2() -> LinqQuery:
     return enumerable([1, 2, 3, 4, 5, 6])
 
-
-def test_method_load():
-    items = query1().load()
-    assert list(items) == list(items)
-
 def test_method_select():
     items = query1().select(lambda x: x['name']).to_list()
     assert items == ['x', 'y', 'y', 'ys']
