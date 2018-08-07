@@ -110,7 +110,13 @@ def test_method_single_or_default():
     pass
 
 def test_method_element_at():
-    pass
+    assert enumerable([2, 5, 7, 'f']).element_at(0) == 2
+    assert enumerable([2, 5, 7, 'f']).element_at(1) == 5
+    with pytest.raises(IndexError):
+        enumerable([]).element_at(0)
+
+    # also support less then zero:
+    assert enumerable([2, 5, 7, 'f']).element_at(-1) == 'f'
 
 def test_method_count():
     pass

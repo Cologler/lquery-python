@@ -11,6 +11,7 @@ from typing import Callable, Set, Dict, List, TypeVar, Any, Generic
 import operator
 
 from asq import query
+from asq.queryables import OutOfRangeError
 from asq.selectors import identity
 from asq.namedelements import IndexedElement, KeyedElement
 
@@ -159,8 +160,16 @@ class Queryable:
         return query(self).single_or_default(default, predicate)
 
     @IQueryable.extend_linq(False)
-    def element_at(self, index):
-        return query(self).element_at(index)
+    def element_at(self, index: int):
+        source = query(self)
+        if index < 0:
+            source = source.reverse()
+            index = -index
+            index -= 1
+        try:
+            return source.element_at(index)
+        except OutOfRangeError:
+            raise IndexError
 
     # get queryable props
 
