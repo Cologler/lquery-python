@@ -5,7 +5,9 @@
 # define some common extension functions for convert to SQL.
 # ----------
 
-from typing import Callable, Set, Dict, List, TypeVar
+import abc
+import itertools
+from typing import Callable, Set, Dict, List, TypeVar, Any, Generic
 import operator
 
 from asq import query
@@ -39,8 +41,13 @@ class Queryable:
     ```
     '''
 
+    @abc.abstractmethod
+    def __iter__(self):
+        # added this method so linter will not show error.
+        raise NotImplementedError
+
     @IQueryable.extend_linq(True)
-    def load(self):
+    def load(self) -> Any:
         '''
         force load data into memory.
         '''
@@ -49,102 +56,98 @@ class Queryable:
     # transforms
 
     @IQueryable.extend_linq(True)
-    def select(self, selector):
+    def select(self, selector) -> Any:
         return query(self).select(selector)
 
-    @IQueryable.extend_linq(True)
-    def select_with_index(self, selector=IndexedElement, transform=identity):
-        return query(self).select_with_index(selector, transform)
+    #@IQueryable.extend_linq(True)
+    #def select_with_index(self, selector=IndexedElement, transform=identity) -> Any:
+    #    return query(self).select_with_index(selector, transform)
+
+    #@IQueryable.extend_linq(True)
+    #def select_with_correspondence(self, selector, result_selector=KeyedElement) -> Any:
+    #    return query(self).select_with_correspondence(selector, result_selector)
 
     @IQueryable.extend_linq(True)
-    def select_with_correspondence(self, selector, result_selector=KeyedElement):
-        return query(self).select_with_correspondence(selector, result_selector)
-
-    @IQueryable.extend_linq(True)
-    def select_many(self, collection_selector=identity, result_selector=identity):
+    def select_many(self, collection_selector=identity, result_selector=identity) -> Any:
         return query(self).select_many(collection_selector, result_selector)
 
-    @IQueryable.extend_linq(True)
-    def select_many_with_index(self,
-            collection_selector=IndexedElement,
-            result_selector=lambda source_element, collection_element: collection_element):
-        return query(self).select_many_with_index(collection_selector, result_selector)
+    #@IQueryable.extend_linq(True)
+    #def select_many_with_index(self,
+    #        collection_selector=IndexedElement,
+    #        result_selector=lambda source_element, collection_element: collection_element) -> Any:
+    #    return query(self).select_many_with_index(collection_selector, result_selector)
 
-    @IQueryable.extend_linq(True)
-    def select_many_with_correspondence(self,
-            collection_selector=identity,
-            result_selector=KeyedElement):
-        return query(self).select_many_with_correspondence(collection_selector, result_selector)
+    #@IQueryable.extend_linq(True)
+    #def select_many_with_correspondence(self,
+    #        collection_selector=identity,
+    #        result_selector=KeyedElement) -> Any:
+    #    return query(self).select_many_with_correspondence(collection_selector, result_selector)
 
     @IQueryable.extend_linq(True)
     def group_by(self, key_selector=identity, element_selector=identity,
-                result_selector=lambda key, grouping: grouping):
+                result_selector=lambda key, grouping: grouping) -> Any:
         return query(self).group_by(key_selector, element_selector, result_selector)
 
     # filter
 
     @IQueryable.extend_linq(True)
-    def where(self, predicate):
+    def where(self, predicate) -> Any:
         return query(self).where(predicate)
 
     @IQueryable.extend_linq(True)
-    def of_type(self, classinfo):
-        return query(self).of_type(classinfo)
+    def of_type(self, type_: type) -> Any:
+        return query(self).of_type(type_)
 
     @IQueryable.extend_linq(True)
-    def take(self, count_=1):
+    def take(self, count_: int = 1) -> Any:
         return query(self).take(count_)
 
     @IQueryable.extend_linq(True)
-    def take_while(self, predicate):
+    def take_while(self, predicate) -> Any:
         return query(self).take_while(predicate)
 
     @IQueryable.extend_linq(True)
-    def skip(self, count_=1):
+    def skip(self, count_: int = 1) -> Any:
         return query(self).skip(count_)
 
     @IQueryable.extend_linq(True)
-    def skip_while(self, predicate):
+    def skip_while(self, predicate) -> Any:
         return query(self).skip_while(predicate)
 
     @IQueryable.extend_linq(True)
-    def distinct(self, selector=identity):
+    def distinct(self, selector=identity) -> Any:
         return query(self).distinct(selector)
 
     # sort
 
     @IQueryable.extend_linq(True)
-    def order_by(self, key_selector=identity):
+    def order_by(self, key_selector=identity) -> Any:
         return query(self).order_by(key_selector)
 
     @IQueryable.extend_linq(True)
-    def order_by_descending(self, key_selector=identity):
+    def order_by_descending(self, key_selector=identity) -> Any:
         return query(self).order_by_descending(key_selector)
 
     @IQueryable.extend_linq(True)
-    def reverse(self):
+    def reverse(self) -> Any:
         return query(self).reverse()
 
     # get one elements
 
     @IQueryable.extend_linq(False)
-    def default_if_empty(self, default):
-        return query(self).default_if_empty(default)
-
-    @IQueryable.extend_linq(False)
-    def first(self, predicate=None):
+    def first(self, predicate=None) -> Any:
         return query(self).first(predicate)
 
     @IQueryable.extend_linq(False)
-    def first_or_default(self, default, predicate=None):
+    def first_or_default(self, default, predicate=None) -> Any:
         return query(self).first_or_default(default, predicate)
 
     @IQueryable.extend_linq(False)
-    def last(self, predicate=None):
+    def last(self, predicate=None) -> Any:
         return query(self).last(predicate)
 
     @IQueryable.extend_linq(False)
-    def last_or_default(self, default, predicate=None):
+    def last_or_default(self, default, predicate=None) -> Any:
         return query(self).last_or_default(default, predicate)
 
     @IQueryable.extend_linq(False)
@@ -198,9 +201,11 @@ class Queryable:
                 result_selector=lambda outer, grouping: grouping):
         return query(self).group_join(inner_iterable, outer_key_selector, inner_key_selector, result_selector)
 
+
+
     @IQueryable.extend_linq(True)
-    def zip(self, other, result_selector=lambda x, y: (x, y)):
-        return query(self).zip(other, result_selector)
+    def zip(self, second, *others):
+        return zip(self, second, *others)
 
     # for numbers
 
@@ -229,19 +234,19 @@ class Queryable:
     # logic operations
 
     @IQueryable.extend_linq(False)
-    def any(self, predicate=None):
+    def any(self, predicate=None) -> bool:
         return query(self).any(predicate)
 
     @IQueryable.extend_linq(False)
-    def all(self, predicate=bool):
+    def all(self, predicate=bool) -> bool:
         return query(self).all(predicate)
 
     @IQueryable.extend_linq(False)
-    def contains(self, value, comparer=operator.eq):
+    def contains(self, value, comparer=operator.eq) -> bool:
         return query(self).contains(value, comparer)
 
     @IQueryable.extend_linq(False)
-    def sequence_equal(self, other, comparer=operator.eq):
+    def sequence_equal(self, other, comparer=operator.eq) -> bool:
         return query(self).sequence_equal(other, comparer)
 
     # get iter result
@@ -249,14 +254,6 @@ class Queryable:
     @IQueryable.extend_linq(False)
     def to_list(self) -> List[T]:
         return list(self)
-
-    @IQueryable.extend_linq(False)
-    def to_tuple(self) -> tuple:
-        return tuple(self)
-
-    @IQueryable.extend_linq(False)
-    def to_set(self) -> Set[T]:
-        return query(self).to_set()
 
     @IQueryable.extend_linq(False)
     def to_dict(self,

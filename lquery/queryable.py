@@ -6,7 +6,8 @@
 # ----------
 
 import types
-from functools import update_wrapper, wraps
+import functools
+import inspect
 from abc import abstractmethod, abstractproperty
 from typing import Union, List, TypeVar
 from typing import Iterable as GenericIterable
@@ -15,6 +16,7 @@ from collections import namedtuple
 from typeguard import typechecked
 
 from .expr import Make, CallExpr, ValueExpr
+from .utils import wrap_fast_fail
 
 # element
 T = TypeVar('T')
@@ -71,11 +73,15 @@ class IQueryable(GenericIterable[T]):
         def _(func):
             # set the `return_queryable`
             func.return_queryable = bool(return_queryable)
+
             method_name = name or func.__name__
-            @wraps(func)
+            @wrap_fast_fail(func)
             def wraped_func(self, *args, **kwargs):
-                allargs = [func, self] + [*args]
-                next_expr = Make.call(*[Make.ref(a) for a in allargs])
+                args_list = list(args)
+                call_args = [func, self] + args_list
+                args_expr = [Make.ref(a) for a in call_args]
+                kwargs_expr = dict([(k, Make.ref(v)) for k, v in kwargs.items()])
+                next_expr = Make.call(*args_expr, **kwargs_expr)
                 return self.provider.execute(next_expr)
             IQueryable._ENTENSION_METHODS[method_name] = wraped_func
             return func
