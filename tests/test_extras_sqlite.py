@@ -5,7 +5,9 @@
 # test for sqlite
 # ----------
 
-from lquery.extras.sqlite import new, sqlite3, SQLiteDbContext
+import sqlite3
+
+from lquery.extras.sqlite import new, SQLiteDbContext
 
 def test_sqlite():
     conn = sqlite3.connect(':memory:')

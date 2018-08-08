@@ -6,13 +6,12 @@
 # ----------
 
 import sqlite3
-import itertools
 
-from ..expr import Make
-from ..queryable import AbstractQueryable, IQueryProvider
-from ..iterable import IterableQueryProvider
+from ...expr import Make
+from ...queryable import AbstractQueryable
+from ...iterable import IterableQueryProvider
 
-from ._common import new
+from .._common import new
 
 class SQLiteQueryable(AbstractQueryable):
 
