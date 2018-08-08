@@ -18,7 +18,7 @@ class EmptyReduceInfo(ReduceInfo):
         return self.MODE_EMPTY
 
     def get_desc_strs(self):
-        return [f'all query was skiped since always empty: {self._mode_reason}']
+        return [f'all query was skiped since always empty: {self._reason}']
 
 
 class EmptyQuery(AbstractQueryable):

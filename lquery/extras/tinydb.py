@@ -19,9 +19,6 @@ class TinyDbQuery(AbstractQueryable):
     def __init__(self, table):
         super().__init__(Make.ref(table), PROVIDER)
 
-    def __iter__(self):
-        yield from self.expr.value
-
 
 class TinyDbQueryProvider(IterableQueryProvider):
     def create_query(self, expr):

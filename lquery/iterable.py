@@ -20,9 +20,6 @@ class NextIterableQuery(AbstractQueryable):
     def __init__(self, expr):
         super().__init__(expr, PROVIDER)
 
-    def __iter__(self):
-        return iter(self.expr.resolve_value())
-
     def update_reduce_info(self, reduce_info):
         reduce_info.add_node(ReduceInfo.TYPE_MEMORY, self.expr)
 

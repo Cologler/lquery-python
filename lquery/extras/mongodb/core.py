@@ -49,7 +49,7 @@ class NextMongoDbQuery(AbstractQueryable):
 
 class MongoDbQuery(NextMongoDbQuery):
     def __init__(self, collection):
-        super().__init__(Make.ref(collection), collection, QueryOptions())
+        super().__init__(Make.ref(self), collection, QueryOptions())
 
     def update_reduce_info(self, reduce_info: ReduceInfo):
         reduce_info.add_node(ReduceInfo.TYPE_SRC, self.expr)

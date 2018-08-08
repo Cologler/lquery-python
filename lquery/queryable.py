@@ -143,6 +143,7 @@ class ReduceInfo:
 
 
 class AbstractQueryable(IQueryable):
+    @typechecked
     def __init__(self, expr: Union[ValueExpr, CallExpr], provider: IQueryProvider):
         self._expr = expr
         self._provider = provider
@@ -154,6 +155,9 @@ class AbstractQueryable(IQueryable):
     @property
     def provider(self) -> IQueryProvider:
         return self._provider
+
+    def __iter__(self):
+        return iter(self._provider.execute(self.expr))
 
     def __str__(self):
         expr = self.expr
