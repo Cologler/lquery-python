@@ -31,7 +31,7 @@ class IQueryProvider:
         raise NotImplementedError
 
     @abstractmethod
-    def execute(self, expr: CallExpr):
+    def execute(self, expr: Union[ValueExpr, CallExpr]):
         '''
         execute query base on expr.
 
@@ -143,7 +143,6 @@ class ReduceInfo:
 
 
 class AbstractQueryable(IQueryable):
-    @typechecked
     def __init__(self, expr: Union[ValueExpr, CallExpr], provider: IQueryProvider):
         self._expr = expr
         self._provider = provider
