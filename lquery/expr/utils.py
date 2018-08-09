@@ -11,6 +11,7 @@ from .core import (
     ParameterExpr, ConstExpr, ReferenceExpr, AttrExpr,
     IndexExpr, BinaryExpr, CallExpr, FuncExpr, ValueExpr
 )
+from .visitor import ExprsIterExprVisitor, ExprVisitor
 
 def _get_attrs(expr, types, attr):
     fields = []
@@ -46,21 +47,20 @@ def get_deep_indexes(index_expr: IndexExpr):
     '''
     return _get_attrs(index_expr, IndexExpr, 'name')
 
+
+class RequireArgumentExprVisitor(ExprVisitor):
+    def visit(self, expr):
+        return False
+
+    def visit_parameter_expr(self, expr):
+        return True
+
 def require_argument(expr: IExpr) -> bool:
     '''
     check is the `expr` reference or use argument to do some thing.
     '''
-    expr_type = type(expr)
-    if expr_type is ParameterExpr:
-        return True
-    if expr_type in (ConstExpr, ReferenceExpr):
-        return False
-    if expr_type in (AttrExpr, IndexExpr):
-        return require_argument(expr.expr)
-    if expr_type is BinaryExpr:
-        return require_argument(expr_type.left) or require_argument(expr_type.right)
-    if expr_type is CallExpr:
-        return any(require_argument(a) for a in list(expr.args) + list(expr.kwargs.values()))
-    if expr_type is FuncExpr:
-        raise NotImplementedError
-    raise NotImplementedError('any others ?')
+    visitor = RequireArgumentExprVisitor()
+    for e in expr.accept(ExprsIterExprVisitor()):
+        if e.accept(visitor):
+            return True
+    return False

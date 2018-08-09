@@ -8,7 +8,7 @@
 from ..queryable import AbstractQueryable
 from ..funcs import LinqQuery
 from ..iterable import IterableQueryProvider
-from ..expr import Make
+from ..expr import Make, IndexExpr
 from ..expr.builder import to_func_expr
 from ..expr.emitter import emit
 
@@ -43,11 +43,19 @@ class TinyDbQueryProvider(IterableQueryProvider):
 
 class TinyDbExprVisitor(DbExprVisitor):
 
+    def visit_binary_expr(self, expr):
+        expr = super().visit_binary_expr(expr)
+        if isinstance(expr.left, IndexExpr):
+            expr = self.rewrite_add_prefix_has_item(expr)
+            return expr
+        return expr
+
     def visit_attr_expr(self, expr):
         if expr.name == 'doc_id':
             # not convert
             return expr
-        return self.rewrite_attr_expr_to_index_expr(expr)
+        expr = self.rewrite_attr_expr_to_index_expr(expr)
+        return expr
 
 
 PROVIDER = TinyDbQueryProvider()

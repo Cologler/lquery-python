@@ -53,6 +53,18 @@ def test_get_items_by_doc_id():
     assert query.where(lambda x: x.doc_id == 2).to_list() == [{'int': 1, 'char': 'b'}]
     assert query.where(lambda x: x.doc_id == 8).to_list() == []
 
+def test_get_items_by_index_which_not_exists():
+    db = get_example_db_1()
+    table = db.table()
+    query = TinyDbQuery(table)
+    assert query.where(lambda x: x['some-not-exists-field'] == 1).to_list() == []
+
+def test_get_items_by_index_which_not_exists_with_attrstyle():
+    db = get_example_db_1()
+    table = db.table()
+    query = TinyDbQuery(table)
+    assert query.where(lambda x: x.some_not_exists_field == 1).to_list() == []
+
 def test_patch():
     db = get_example_db_1()
     table = db.table()

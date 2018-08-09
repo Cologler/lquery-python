@@ -82,3 +82,35 @@ class DefaultExprVisitor(ExprVisitor):
 class ValueResolverExprVisitor(ExprVisitor):
     def visit(self, expr):
         return expr.resolve_value()
+
+
+class ExprsIterExprVisitor(ExprVisitor):
+    def visit(self, expr):
+        yield expr
+
+    def visit_attr_expr(self, expr):
+        yield expr
+        yield from expr.expr.accept(self)
+
+    def visit_index_expr(self, expr):
+        yield expr
+        yield from expr.expr.accept(self)
+        yield from expr.key.accept(self)
+
+    def visit_call_expr(self, expr):
+        yield expr
+        expr_list = list(expr.args) + list(expr.kwargs.values())
+        for e in expr_list:
+            yield from e.accept(self)
+
+    def visit_func_expr(self, expr):
+        raise NotImplementedError
+
+    def visit_unary_expr(self, expr):
+        yield expr
+        yield from expr.expr.accept(self)
+
+    def visit_binary_expr(self, expr):
+        yield expr
+        yield from expr.left.accept(self)
+        yield from expr.right.accept(self)
