@@ -7,7 +7,7 @@
 
 from bytecode.cfg import ControlFlowGraph
 from bytecode import (
-    Instr, Compare, FreeVar
+    Instr, Compare, FreeVar, Label
 )
 
 from .core import ConstExpr
@@ -25,10 +25,18 @@ class ByteCodeEmitter:
         self._block_0 = self._bytecode[0]
         self._block = self._block_0 # current block
 
-    def emit(self):
+    def _print_blocks(self):
+        for bi, block in enumerate(self._bytecode):
+            print(f'block {bi}:')
+            for i in range(len(block)):
+                print(f'    {block[i]}')
+
+    def emit(self, *, debug=False):
         try:
             self.on_expr(self._src_expr.body)
             self._block.append(Instr('RETURN_VALUE'))
+            if debug:
+                self._print_blocks()
             code = self._bytecode.to_bytecode().to_code()
             cell = tuple(self._cells)
             def compiled_func():
@@ -37,6 +45,11 @@ class ByteCodeEmitter:
             compiled_func.__code__ = code
             return compiled_func
         except NotImplementedError:
+            if debug:
+                import traceback
+                traceback.print_exc()
+                for instr in self._block:
+                    print(instr)
             return None
 
     def on_expr(self, expr):
@@ -87,12 +100,28 @@ class ByteCodeEmitter:
     }
 
     def on_binaryexpr(self, expr):
-        self.on_expr(expr.left)
-        self.on_expr(expr.right)
         if expr.op in self._OP_MAP:
+            self.on_expr(expr.left)
+            self.on_expr(expr.right)
             self._block.append(Instr("COMPARE_OP", self._OP_MAP[expr.op]))
+        elif expr.op in ('and', 'or'):
+            self.on_expr(expr.left)
+            block_left = self._block
+            block_right = self._bytecode.add_block()
+            self._block = block_right
+            self.on_expr(expr.right)
+            if not self._block:
+                # like a and (b and c), has a empty block can reuse.
+                block_end = self._block
+            else:
+                block_end = self._bytecode.add_block()
+            if expr.op == 'and':
+                block_left.append(Instr('JUMP_IF_FALSE_OR_POP', block_end))
+            else:
+                block_left.append(Instr('JUMP_IF_TRUE_OR_POP', block_end))
+            self._block = block_end
         else:
-            raise NotImplementedError
+            raise NotImplementedError(f'not impl op: {expr.op}')
 
     def on_callexpr(self, expr):
         raise NotImplementedError
@@ -113,9 +142,9 @@ class ByteCodeEmitter:
         raise NotImplementedError
 
 
-def emit(func_expr):
+def emit(func_expr, *, debug=False):
     '''
     return `None` if emit failed.
     '''
     emiter = ByteCodeEmitter(func_expr)
-    return emiter.emit()
+    return emiter.emit(debug=debug)
