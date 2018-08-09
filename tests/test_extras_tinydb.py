@@ -11,7 +11,7 @@ import unittest
 
 from tinydb import TinyDB
 from tinydb.storages import MemoryStorage
-from lquery.extras.tinydb import TinyDbQuery
+from lquery.extras.tinydb import TinyDbQuery, patch
 
 def get_example_db_1():
     db = TinyDB(storage=MemoryStorage)
@@ -51,3 +51,17 @@ def test_get_items_by_doc_id():
     table = db.table()
     query = TinyDbQuery(table)
     assert query.where(lambda x: x.doc_id == 2).to_list() == [{'int': 1, 'char': 'b'}]
+    assert query.where(lambda x: x.doc_id == 8).to_list() == []
+
+def test_patch():
+    db = get_example_db_1()
+    table = db.table()
+    assert not hasattr(table, 'query')
+    patch()
+    assert hasattr(table, 'query')
+    query = table.query()
+    assert isinstance(query, TinyDbQuery)
+    assert query.where(lambda x: x['int'] == 1).to_list() == [
+        {'int': 1, 'char': 'a'},
+        {'int': 1, 'char': 'b'}
+    ]

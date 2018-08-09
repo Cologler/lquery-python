@@ -51,3 +51,12 @@ class TinyDbExprVisitor(DbExprVisitor):
 
 
 PROVIDER = TinyDbQueryProvider()
+
+def patch():
+    '''
+    '''
+    from tinydb.database import Table
+    if not hasattr(Table, 'query'):
+        def query(self):
+            return TinyDbQuery(self)
+        Table.query = query
