@@ -34,7 +34,6 @@ class TinyDbQueryProvider(IterableQueryProvider):
                 return
             expr = func_expr.accept(_TinyDb1ExprVisitor())
             expr = expr.accept(_TinyDb2ExprVisitor())
-            print(expr)
             if expr is func_expr:
                 return
             compiled_func = emit(expr)
@@ -69,18 +68,24 @@ class _TinyDb2ExprVisitor(DbExprVisitor):
     `lambda x: 'a' in x and 'b' in x['a'] and x['a']['b'] == 1`
     '''
     def visit_binary_expr(self, expr):
-        print(f'visit_binary_expr:{expr}')
         expr = super().visit_binary_expr(expr)
-        if expr.left.type == ExprType.Index:
+        if expr.op == 'in':
+            if expr.right.type == ExprType.Index:
+                indexes, src = get_deep_indexes(expr.right)
+                if src.type == ExprType.Parameter:
+                    return self.rewrite_add_cond_has_key(expr.right, indexes, expr)
+        elif expr.left.type == ExprType.Index:
             indexes, src = get_deep_indexes(expr.left)
             if src.type == ExprType.Parameter:
-                cur_expr = expr
-                src_expr = expr.left
-                for index in reversed(indexes):
-                    src_expr = src_expr.expr
-                    cur_expr = self.rewrite_add_prefix_has_item(index, src_expr, cur_expr)
-                return cur_expr
+                return self.rewrite_add_cond_has_key(expr.left, indexes, expr)
         return expr
+
+    def rewrite_add_cond_has_key(self, src_expr, indexes, root_expr):
+        cur_expr = root_expr
+        for index in reversed(indexes):
+            src_expr = src_expr.expr
+            cur_expr = self.rewrite_add_prefix_has_item(index, src_expr, cur_expr)
+        return cur_expr
 
     def rewrite_add_prefix_has_item(self, key, src, expr):
         return Make.binary_op(
