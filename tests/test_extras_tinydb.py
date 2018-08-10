@@ -9,6 +9,8 @@ import sys
 import traceback
 import unittest
 
+import pytest
+
 from tinydb import TinyDB
 from tinydb.storages import MemoryStorage
 from lquery.extras.tinydb import TinyDbQuery, patch
@@ -88,7 +90,29 @@ def test_get_items_by_index_deep():
         {'int': 1, 'char': 'a', 'dict': {'key': 1}}
     ]
     assert query.where(lambda x: x['dict']['key_not_exists'] == 1).to_list() == []
-    assert query.where(lambda x: x['key_not_exists'][''] == 1).to_list() == []
+    assert query.where(lambda x: x['key_not_exists']['dict'] == 1).to_list() == []
+
+    with pytest.raises(TypeError):
+        # TypeError: argument of type 'int' is not iterable
+        # user should know `x['int']` is not a dict.
+        # I don't want call `isinstance` for each times.
+        assert query.where(lambda x: x['int']['dict'] == 1).to_list() == []
+
+def test_get_items_by_attr_deep():
+    db = get_example_db_2()
+    table = db.table()
+    query = TinyDbQuery(table)
+    # field 1
+    assert query.where(lambda x: x.dict.key == 1).to_list() == [
+        {'int': 1, 'char': 'a', 'dict': {'key': 1}}
+    ]
+    assert query.where(lambda x: x.dict.key_not_exists == 1).to_list() == []
+    assert query.where(lambda x: x.key_not_exists.dict == 1).to_list() == []
+
+    with pytest.raises(AttributeError):
+        # x.doc_id.key will not convert to x.doc_id['key']
+        # so here raise `AttributeError` instead of `KeyError`
+        assert query.where(lambda x: x.doc_id.key_not_exists == 1).to_list() == []
 
 def test_patch():
     db = get_example_db_1()
