@@ -5,7 +5,7 @@
 # the common visitor for database
 # ----------
 
-from ..expr import Make, AttrExpr, BinaryExpr, IndexExpr, ParameterExpr
+from ..expr import Make, AttrExpr, BinaryExpr, IndexExpr, ParameterExpr, ExprType
 from ..expr.visitor import DefaultExprVisitor
 
 
@@ -17,31 +17,18 @@ class DbExprVisitor(DefaultExprVisitor):
         '''
         rewrite `expr.name` => `expr['name']`
         '''
+        assert expr.type == ExprType.Attr
         expr_body = expr.expr.accept(self)
         return Make.index(expr_body, Make.const(expr.name))
 
-    def rewrite_add_prefix_has_item(self, expr: BinaryExpr):
+    def is_get_deep_indexes_from_parameter(self, expr):
         '''
-        rewrite `expr['name'] == 1` => `'name' in expr and expr['name'] == 1`
+        test is match `arg['a']['b']...`
         '''
-        if isinstance(expr.left, IndexExpr):
-            return Make.binary_op(
-                Make.binary_op(
-                    expr.left.key,
-                    'in',
-                    expr.left.expr
-                ),
-                'and',
-                expr
-            )
-        return expr
-
-    def is_get_from_parameter(self, expr):
-        '''
-        test is match `x => x(['n']|n)...`
-        '''
-        if not isinstance(expr, (IndexExpr, AttrExpr)):
+        if not expr.type == ExprType.Index:
             return False
-        if isinstance(expr, ParameterExpr):
+        if not expr.key.type == ExprType.Const:
+            return False
+        if expr.expr.type == ExprType.Parameter:
             return True
-        return self.is_get_from_parameter(expr.expr)
+        return self.is_get_deep_indexes_from_parameter(expr.expr)

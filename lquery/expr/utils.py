@@ -7,7 +7,7 @@
 
 from typing import Union
 from .core import (
-    IExpr,
+    IExpr, ExprType,
     ParameterExpr, ConstExpr, ReferenceExpr, AttrExpr,
     IndexExpr, BinaryExpr, CallExpr, FuncExpr, ValueExpr
 )
@@ -45,7 +45,13 @@ def get_deep_indexes(index_expr: IndexExpr):
 
     `IndexExpr(x.a['size']['h'])` -> `['size', 'h'], AttrExpr(x.a)`.
     '''
-    return _get_attrs(index_expr, IndexExpr, 'name')
+    indexes = []
+    cur_expr = index_expr
+    while cur_expr.type == ExprType.Index:
+        indexes.append(cur_expr.key)
+        cur_expr = cur_expr.expr
+    indexes.reverse()
+    return indexes, cur_expr
 
 
 class RequireArgumentExprVisitor(ExprVisitor):

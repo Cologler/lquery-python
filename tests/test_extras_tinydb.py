@@ -65,6 +65,31 @@ def test_get_items_by_index_which_not_exists_with_attrstyle():
     query = TinyDbQuery(table)
     assert query.where(lambda x: x.some_not_exists_field == 1).to_list() == []
 
+def get_example_db_2():
+    db = TinyDB(storage=MemoryStorage)
+    table = db.table()
+    table.insert({'int': 1, 'char': 'a', 'dict': {
+        'key': 1
+    }})
+    table.insert({'int': 1, 'char': 'b', 'dict': {
+        'key': 2
+    }})
+    table.insert({'int': 2, 'char': 'b', 'dict': {
+        'key': 2
+    }})
+    return db
+
+def test_get_items_by_index_deep():
+    db = get_example_db_2()
+    table = db.table()
+    query = TinyDbQuery(table)
+    # field 1
+    assert query.where(lambda x: x['dict']['key'] == 1).to_list() == [
+        {'int': 1, 'char': 'a', 'dict': {'key': 1}}
+    ]
+    assert query.where(lambda x: x['dict']['key_not_exists'] == 1).to_list() == []
+    assert query.where(lambda x: x['key_not_exists'][''] == 1).to_list() == []
+
 def test_patch():
     db = get_example_db_1()
     table = db.table()

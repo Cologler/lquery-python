@@ -5,6 +5,8 @@
 #
 # ----------
 
+import enum
+import abc
 from typing import List, Dict, Callable, Tuple
 
 from typeguard import typechecked
@@ -20,15 +22,39 @@ class RequireArgumentError(Exception):
 
 # interfaces
 
+class ExprType(enum.Enum):
+    Parameter = 2
+    Const = 3
+    Reference = 4
+    Deref = 5
+    Attr = 6
+    Index = 7
+    Unary = 8
+    Binary = 9
+    Call = 10
+    Func = 11
+    BuildList = 31
+    BuildDict = 32
+
+
 class IExpr:
     __slots__ = ()
 
+    @abc.abstractproperty
+    def type(self):
+        '''
+        return a enum `ExprType`.
+        '''
+        raise NotImplementedError
+
+    @abc.abstractmethod
     def accept(self, visitor):
         '''
         accept a visitor as selector.
         '''
         raise NotImplementedError
 
+    @abc.abstractmethod
     def resolve_value(self):
         '''
         try resolve value from static expr tree.
@@ -91,6 +117,10 @@ class ParameterExpr(Expr):
     def __repr__(self):
         return f'ParameterExpr({repr(self._name)})'
 
+    @property
+    def type(self):
+        return ExprType.Parameter
+
     def accept(self, visitor):
         return visitor.visit_parameter_expr(self)
 
@@ -104,6 +134,10 @@ class ConstExpr(ValueExpr):
     '''
     __slots__ = ()
 
+    @property
+    def type(self):
+        return ExprType.Const
+
     def accept(self, visitor):
         return visitor.visit_const_expr(self)
 
@@ -113,6 +147,10 @@ class ReferenceExpr(ValueExpr):
     represents value expr for both of immutable and mutable object.
     '''
     __slots__ = ()
+
+    @property
+    def type(self):
+        return ExprType.Reference
 
     def accept(self, visitor):
         return visitor.visit_reference_expr(self)
@@ -133,6 +171,10 @@ class DerefExpr(Expr):
 
     def __repr__(self):
         return f'DerefExpr({repr(self.resolve_value())})'
+
+    @property
+    def type(self):
+        return ExprType.Deref
 
     def accept(self, visitor):
         return visitor.visit_deref_expr(self)
@@ -165,6 +207,10 @@ class AttrExpr(Expr):
 
     def __repr__(self):
         return f'AttrExpr({repr(self._expr)}, {repr(self._name)})'
+
+    @property
+    def type(self):
+        return ExprType.Attr
 
     def accept(self, visitor):
         return visitor.visit_attr_expr(self)
@@ -228,6 +274,10 @@ class IndexExpr(Expr):
     def __repr__(self):
         return f'IndexExpr({repr(self._expr)}, {repr(self._key)})'
 
+    @property
+    def type(self):
+        return ExprType.Index
+
     def accept(self, visitor):
         return visitor.visit_index_expr(self)
 
@@ -257,6 +307,10 @@ class UnaryExpr(Expr):
 
     def __repr__(self):
         return f'UnaryExpr({repr(self._op)}, {repr(self._expr)})'
+
+    @property
+    def type(self):
+        return ExprType.Unary
 
     def accept(self, visitor):
         return visitor.visit_unary_expr(self)
@@ -299,6 +353,10 @@ class BinaryExpr(Expr):
 
     def __repr__(self):
         return f'BinaryExpr({repr(self._left)}, {repr(self._op)}, {repr(self._right)})'
+
+    @property
+    def type(self):
+        return ExprType.Binary
 
     def accept(self, visitor):
         return visitor.visit_binary_expr(self)
@@ -347,6 +405,10 @@ class CallExpr(Expr):
         inside = ', '.join(exprs)
         return f'CallExpr({inside})'
 
+    @property
+    def type(self):
+        return ExprType.Call
+
     def accept(self, visitor):
         return visitor.visit_call_expr(self)
 
@@ -379,6 +441,10 @@ class FuncExpr(Expr):
     def __repr__(self):
         return f'FuncExpr({repr(self._body)}, {repr(self._args)})'
 
+    @property
+    def type(self):
+        return ExprType.Func
+
     def accept(self, visitor):
         return visitor.visit_func_expr(self)
 
@@ -401,6 +467,10 @@ class BuildListExpr(Expr):
         items_str = ', '.join(f'{repr(v)}' for v in self._items)
         return f'BuildListExpr({items_str})'
 
+    @property
+    def type(self):
+        return ExprType.BuildList
+
     def resolve_value(self):
         return [x.resolve_value() for x in self._items]
 
@@ -418,6 +488,10 @@ class BuildDictExpr(Expr):
     def __str__(self):
         kvps_str = ', '.join(f'{repr(k.value)}: {repr(v.value)}' for k, v in self._kvps)
         return f'{{{kvps_str}}}'
+
+    @property
+    def type(self):
+        return ExprType.BuildDict
 
     def resolve_value(self):
         d = {}
