@@ -499,9 +499,15 @@ class BuildDictExpr(Expr):
             d[k.resolve_value()] = v.resolve_value()
         return d
 
+NoneType = type(None)
+
 class Make:
     @staticmethod
     def ref(value):
+        # pylint: disable=C0123
+        # use `type()` instead of `isinstance()`, ensure not inherit.
+        if type(value) in (NoneType, str, int):
+            return Make.const(value)
         return ReferenceExpr(value)
 
     @staticmethod
