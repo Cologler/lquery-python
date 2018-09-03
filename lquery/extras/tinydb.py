@@ -13,7 +13,7 @@ from ..expr.builder import to_func_expr
 from ..expr.emitter import emit
 from ..expr.utils import get_deep_indexes
 
-from ._common_visitor import DbExprVisitor
+from ._common.visitor import DbExprVisitor
 
 
 class TinyDbQuery(AbstractQueryable):

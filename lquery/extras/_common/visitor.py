@@ -5,8 +5,8 @@
 # the common visitor for database
 # ----------
 
-from ..expr import Make, AttrExpr, BinaryExpr, IndexExpr, ParameterExpr, ExprType
-from ..expr.visitor import DefaultExprVisitor
+from ...expr import Make, AttrExpr, ExprType
+from ...expr.visitor import DefaultExprVisitor
 
 
 class DbExprVisitor(DefaultExprVisitor):
