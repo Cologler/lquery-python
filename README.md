@@ -23,7 +23,7 @@ So for python:
 
 ``` py
 query: Queryable = ...;
-expr = query.where(z => z.name == 's').select(z => z.value).to_list();
+expr = query.where(lambda z: z.name == 's').select(lambda z: z.value).to_list();
 ```
 
 ### for in-memory iterable
