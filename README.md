@@ -6,9 +6,9 @@ The library is a demo, not for production (yet).
 
 ## Compare with Others
 
-Different between lquery and others (linq for python like asq):
+Different between lquery and others (linq for python like `asq`):
 
-**lquery try convert func (from bytecode) to SQL and query from database process.**
+**lquery try convert func (from bytecode) to SQL and query on database process.**
 
 ## Compare with CSharp
 
@@ -22,7 +22,7 @@ var items = query.Where(z => z.Name == 's').Select(z => z.Value).ToList();
 So for python:
 
 ``` py
-query: Queryable = None;
+query: Queryable = ...;
 expr = query.where(z => z.name == 's').select(z => z.value).to_list();
 ```
 
